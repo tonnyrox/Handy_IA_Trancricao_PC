@@ -775,7 +775,8 @@ fn default_theme() -> Theme {
 }
 
 fn default_post_process_enabled() -> bool {
-    false
+    // Fork PT-BR: a revisão gramatical faz parte do produto, não é opcional.
+    true
 }
 
 fn default_ptbr_final_period() -> bool {
@@ -793,7 +794,7 @@ fn default_show_tray_icon() -> bool {
 }
 
 fn default_post_process_provider_id() -> String {
-    "openai".to_string()
+    "groq".to_string()
 }
 
 fn default_post_process_providers() -> Vec<PostProcessProvider> {
@@ -919,6 +920,9 @@ fn default_model_for_provider(provider_id: &str) -> String {
     if provider_id == APPLE_INTELLIGENCE_PROVIDER_ID {
         return APPLE_INTELLIGENCE_DEFAULT_MODEL_ID.to_string();
     }
+    if provider_id == "groq" {
+        return "openai/gpt-oss-120b".to_string();
+    }
     String::new()
 }
 
@@ -1040,6 +1044,16 @@ fn ensure_post_process_defaults(settings: &mut AppSettings) -> bool {
         }
     }
 
+    // Fork PT-BR: garantir um prompt selecionado. Sem isso o LLM falha
+    // silenciosamente ("no prompt is selected") e o texto volta bruto.
+    if settings.post_process_selected_prompt_id.is_none()
+        && !settings.post_process_prompts.is_empty()
+    {
+        settings.post_process_selected_prompt_id =
+            Some("default_improve_transcriptions".to_string());
+        changed = true;
+    }
+
     changed
 }
 
@@ -1128,7 +1142,7 @@ pub fn get_default_settings() -> AppSettings {
         post_process_api_keys: default_post_process_api_keys(),
         post_process_models: default_post_process_models(),
         post_process_prompts: default_post_process_prompts(),
-        post_process_selected_prompt_id: None,
+        post_process_selected_prompt_id: Some("default_improve_transcriptions".to_string()),
         mute_while_recording: false,
         append_trailing_space: false,
         app_language: default_app_language(),

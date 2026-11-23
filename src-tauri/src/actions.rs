@@ -16,7 +16,7 @@ use crate::utils::{
     self, show_processing_overlay, show_recording_overlay, show_transcribing_overlay,
 };
 use crate::TranscriptionCoordinator;
-use log::{debug, error, warn};
+use log::{debug, error, info, warn};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use specta::Type;
@@ -203,6 +203,12 @@ where
     }
 }
 
+/// Gate único da revisão PT-BR (seção 13.4): nunca usar presença de pontuação
+/// como critério — pontuação errada é justamente o que queremos corrigir.
+fn should_post_process(settings: &AppSettings, post_process: bool, text: &str) -> bool {
+    post_process || (settings.post_process_enabled && !is_blank_transcription(text))
+}
+
 fn should_use_streaming_overlay(style: OverlayStyle, is_streaming: bool) -> bool {
     style == OverlayStyle::Live && is_streaming
 }
@@ -230,7 +236,7 @@ async fn post_process_transcription(
     let provider = match settings.active_post_process_provider().cloned() {
         Some(provider) => provider,
         None => {
-            debug!("Post-processing enabled but no provider is selected");
+            warn!("Post-processing enabled but no provider is selected");
             return PostProcessOutcome::Failed;
         }
     };
@@ -242,7 +248,7 @@ async fn post_process_transcription(
         .unwrap_or_default();
 
     if model.trim().is_empty() {
-        debug!(
+        warn!(
             "Post-processing skipped because provider '{}' has no model configured",
             provider.id
         );
@@ -252,7 +258,7 @@ async fn post_process_transcription(
     let selected_prompt_id = match &settings.post_process_selected_prompt_id {
         Some(id) => id.clone(),
         None => {
-            debug!("Post-processing skipped because no prompt is selected");
+            warn!("Post-processing skipped because no prompt is selected");
             return PostProcessOutcome::Failed;
         }
     };
@@ -298,7 +304,7 @@ async fn post_process_transcription(
     // field the endpoint understands and retries without it if rejected.
     let disable_reasoning = matches!(
         provider.id.as_str(),
-        "custom" | "openrouter" | "nvidia"
+        "custom" | "openrouter" | "nvidia" | "groq"
     );
 
     if provider.supports_structured_output {
@@ -928,14 +934,18 @@ impl ShortcutAction for TranscribeAction {
                             // Revisão PT-BR no atalho principal: sempre que habilitado.
                             // NÃO usar presença de pontuação como critério — pontuação
                             // errada é justamente o que precisamos corrigir (seção 13.4).
-                            if !post_process {
-                                let settings = get_settings(&ah);
-                                if settings.post_process_enabled
-                                    && !is_blank_transcription(&transcription)
-                                {
-                                    post_process = true;
-                                }
+                            let settings = get_settings(&ah);
+                            let enable = should_post_process(&settings, post_process, &transcription);
+                            if !enable && settings.post_process_enabled {
+                                info!(
+                                    "Revisão PT-BR não chamada: transcrição vazia ou em branco"
+                                );
+                            } else if !enable && !settings.post_process_enabled {
+                                info!(
+                                    "Revisão PT-BR não chamada: post_process_enabled=false"
+                                );
                             }
+                            post_process = enable;
 
                             if post_process {
                                 if use_streaming_overlay {
@@ -1220,8 +1230,8 @@ pub static ACTION_MAP: Lazy<HashMap<String, Arc<dyn ShortcutAction>>> = Lazy::ne
 mod tests {
     use super::{
         complete_unless_cancelled, fidelity_guard, is_blank_transcription,
-        non_blank_post_processed_text, post_process_transcription, should_use_streaming_overlay,
-        strip_invisible_chars, strip_think_block, PostProcessOutcome,
+        non_blank_post_processed_text, post_process_transcription, should_post_process,
+        should_use_streaming_overlay, strip_invisible_chars, strip_think_block, PostProcessOutcome,
     };
     use crate::settings::{get_default_settings, AppSettings, OverlayStyle};
     use std::future;
@@ -1311,6 +1321,15 @@ mod tests {
             ),
             PostProcessOutcome::Failed
         );
+    }
+
+    #[test]
+    fn gate_allows_short_text_with_internal_punctuation() {
+        // Regra travada (13.4 PASSO 1): pontuação NUNCA bloqueia a revisão.
+        let settings = get_default_settings();
+        let texto = "Maria, que mora aqui perto, trouxe o bolo.";
+        assert!(should_post_process(&settings, false, texto));
+        assert!(should_post_process(&settings, false, "que horas são"));
     }
 
     #[test]

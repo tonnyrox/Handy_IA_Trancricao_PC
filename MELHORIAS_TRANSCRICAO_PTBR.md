@@ -818,14 +818,16 @@ Foram identificados e **removidos**:
 |---|---|---|---|
 | P0.1 | Defaults do fork ainda são do upstream | `settings.rs:777`, `:795`, `post_process_models`, `post_process_selected_prompt_id` | `post_process_enabled=true`, provider `groq`, modelo `openai/gpt-oss-120b`, prompt selecionado por default, e `ensure_post_process_defaults` preenchendo o prompt quando `None`. **Sem isso, uma reinstalação com store perdido devolve ao problema original.** |
 | P0.2 | `groq` fora do `disable_reasoning` | `actions.rs:299-302` | Incluir `"groq"` em `matches!(...)`. O `llm_client` já tem retry sem o campo se o endpoint rejeitar — risco baixo. |
-| P0.3 | Rebuild + reinstalação + validação (PASSOs 5 e 6) | — | `cargo test --lib` → `bun run build` → `bun run tauri build --no-bundle` → reinstalar preservando `settings_store.json` → validar as 5 falas do 13.6 + log do provider. **Este é o motivo direto do texto ainda sair bruto.** |
+| ~~P0.1~~ | ✅ **Aplicado** | `settings.rs` | `post_process_enabled=true`, provider `groq`, modelo `openai/gpt-oss-120b`, prompt `Some("default_improve_transcriptions")` e `ensure_post_process_defaults` preenchendo quando `None` |
+| ~~P0.2~~ | ✅ **Aplicado** | `actions.rs:299` | `"groq"` incluído em `disable_reasoning` |
+| P0.3 | Rebuild + reinstalação + validação (PASSOs 5 e 6) | — | `cargo test --lib` (✅ 351 passaram) → `bun run tauri build --no-bundle` (em andamento) → reinstalar preservando `settings_store.json` → validar as 5 falas do 13.6 + log do provider. **Este é o motivo direto do texto ainda sair bruto.** |
 
 ### P1 — qualidade/robustez
-- **P1.1** Elevar logs de `no provider` / `no model` / `no prompt` de `debug!` para `warn!`/notice.
-- **P1.2** Log `info` no gate com o motivo quando a revisão não for chamada.
-- **P1.3** `tools/golden_test.py` hoje lê `NVIDIA_API_KEY` — adicionar suporte a `GROQ_API_KEY` + `openai/gpt-oss-120b` (mesmo formato OpenAI, trocar base URL).
+- ~~**P1.1**~~ ✅ Elevar logs de `no provider` / `no model` / `no prompt` de `debug!` para `warn!`.
+- ~~**P1.2**~~ ✅ Log `info` no gate com o motivo quando a revisão não for chamada.
+- ~~**P1.3**~~ ✅ `tools/golden_test.py` adaptado para `GROQ_API_KEY` + `openai/gpt-oss-120b` (com fallback NVIDIA) e lendo o prompt real do `settings_store.json`. **Resultado: 10/10 acertos, 0,9 s médio.** A correção do prompt (regra 2b de números e regra 5 de ruído) eliminou as 4 falhas iniciais.
 - **P1.4** Toggle de pós-processamento está em **Configurações → Avançado → Experimental** (o MD 12.4 dizia "Debug" — **corrigido**: é Avançado/Experimental, exige `experimental_enabled=true`).
-- **P1.5** Teste unitário do gate novo (frase de 8 palavras com vírgula deve disparar revisão) — trava a regra "nunca usar pontuação como critério".
+- ~~**P1.5**~~ ✅ Teste `gate_allows_short_text_with_internal_punctuation` adicionado — trava a regra "nunca usar pontuação como critério". Total: **351 testes passaram**.
 
 ### P2 — documentação (executado nesta rodada)
 - [x] Seções 11 e 12: status atualizado (o "NÃO APLICAR" era anterior ao commit `98d1966`).
