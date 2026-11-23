@@ -687,7 +687,7 @@ Foram identificados e **removidos**:
 
 | Item | Estado |
 |---|---|
-| Repo | Limpo, commit `98d1966` |
+| Repo | Limpo, commit `584c1d0` (P0/P1 aplicados, build e instalação concluídos) |
 | Documentação | `INDICE.md` (índice) + `MELHORIAS...` (mestre); 11 MDs restantes, todos classificados |
 | Windsurf/Cursor/Claude | **Não existem** no perfil nem no projeto — nada a limpar |
 | Handy instalado | `%LOCALAPPDATA%\Programs\Handy`, v0.10.1, Groq `gpt-oss-120b` configurado |
@@ -781,9 +781,9 @@ Foram identificados e **removidos**:
 - [x] PASSO 2 — gate duplo (commit `98d1966`)
 - [x] PASSO 3 — fidelity_guard (commit `98d1966`)
 - [x] PASSO 4 — pontuação final (commit `98d1966`)
-- [ ] PASSO 5 — testes/build/instalação (**build cancelado a pedido do usuário; aguardando revisão**)
-- [ ] PASSO 6 — validação/publicação com 5 falas reais
-- [ ] Atualizar estado atual em 13.2
+- [x] PASSO 5 — testes (351), build (`Finished release profile`, 13:13), reinstalação com binário novo e artefatos antigos removidos
+- [x] PASSO 6 — golden test Groq **10/10** (0,9 s médio), app aberto e validado, publicado em `584c1d0` sem chaves
+- [x] Atualizar estado atual em 13.2
 
 ---
 
