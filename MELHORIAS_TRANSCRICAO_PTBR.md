@@ -1132,4 +1132,65 @@ Aplicado em `src/components/settings/models/ModelsSettings.tsx`:
 - Somente interface alterada — **não houve build Tauri nesta etapa**.
 - Config/chaves intactas (`settings_store.json` fora do repo).
 
+---
+
+# 19. VISÃO DE ESCOPO ÚNICO POR PROVEDOR (24/11)
+
+> O usuário enviou uma versão reorganizada do `preview-ias.html` (substituída no repo). Ela define uma **mudança de arquitetura**: um único provedor faz transcrição **e** revisão, com **uma chave só**.
+
+## 19.1 O que a nova tela propõe
+
+| Guia | Provedor | Chave | Modelos (transcrição) | Revisão |
+|---|---|---|---|---|
+| Nuvem | **Groq** | `gsk_...` | Whisper Large v3 Turbo / Whisper Large v3 / Distil-Whisper | `gpt-oss` (mesma chave) |
+| Nuvem | **NVIDIA** | `nvapi-...` | Parakeet 1.1B / Canary 1B | `Nemotron` (mesma chave) |
+| Local | — | — | modelos baixados no dispositivo | — |
+
+A tela troca **todos os textos, placeholder, hint, modelos, avançado e status** quando o provedor muda — "escopo único: toda a transcrição e processamento usam exclusivamente a API do provedor escolhido".
+
+## 19.2 Diferença em relação ao código atual (importante)
+
+| Item | Código hoje | Nova visão |
+|---|---|---|
+| ASR | **Riva gRPC fixo** (Parakeet), `nvidia_riva.rs` | Whisper (Groq) **ou** Parakeet/Canary (NVIDIA), conforme provedor |
+| Revisão | Groq `gpt-oss-120b` | Groq `gpt-oss` **ou** NVIDIA `Nemotron` |
+| Chaves | **duas** (NVIDIA + Groq) | **uma** (a do provedor ativo) |
+| `transcription_provider` | `"nvidia" \| "local"` | `"groq" \| "nvidia" \| "local"` |
+| Modelo de ASR | `nvidia_transcription_model` é **código morto** (ASR ignora) | passa a ser **real**: seleciona qual modelo de transcrição usar |
+
+## 19.3 O que precisa mudar no Rust para implementar
+
+1. **`settings.rs`**: aceitar `transcription_provider = "groq"`; defaults do fork passam a `groq` (ou manter nvidia — decisão pendente).
+2. **Novo módulo `groq_asr.rs`**: transcrever via `https://api.groq.com/openai/v1/audio/transcriptions` (`whisper-large-v3-turbo`), com a chave Groq e `language="pt"`.
+3. **`managers/transcription.rs`**: despachar ASR por provider — `groq` → `groq_asr`, `nvidia` → `nvidia_riva`, `local` → transcribe-cpp. Hoje só existe o caminho NVIDIA/local.
+4. **Revisão por provider**: `actions.rs:291` — hoje o provider `nvidia` reutiliza `nvidia_transcription_api_key()` (B10); generalizar para "provider ativo usa a própria chave, seja Groq ou NVIDIA".
+5. **`shortcut/mod.rs`**: `change_transcription_provider_setting` e testes de validação aceitarem `"groq"`.
+6. **UI (`ModelsSettings.tsx`)**: substituir os dois dropdowns atuais pelo fluxo de **3 passos** da nova tela (Provedor → Chave → Modelo) + status consolidado, exatamente como no HTML enviado.
+7. **`bindings.ts` / i18n**: novos tipos e textos (com `defaultValue` ou chaves em 27 idiomas).
+
+## 19.4 Riscos
+
+| Risco | Mitigação |
+|---|---|
+| Whisper turbo tem WER ~12% (Riva é mais preciso) | Validar com `tools/golden_test.py` e 5 falas reais antes de trocar o default |
+| Groq tem limites de áudio/dia (28.800 s free) | Monitorar 429; manter fallback para NVIDIA |
+| `canary-1b-multilingual` pode não existir na conta | Validar modelos com `fetchNvidiaTranscriptionModels` |
+| Dois caminhos de ASR aumentam complexidade | Manter `nvidia_riva.rs` intacto; adicionar `groq_asr.rs` ao lado |
+
+## 19.5 Estado
+
+- ✅ HTML enviado salvo como `preview-ias.html` (cópia fiel da visão, autocontido, tema escuro).
+- ⏳ **Nada disso foi implementado no Rust ainda** — é planejamento.
+- App instalado continua com Riva + Groq (duas chaves) funcionando.
+
+## 19.6 Checklist
+
+- [ ] Decidir provedor padrão (Groq ou NVIDIA)
+- [ ] Implementar `groq_asr.rs`
+- [ ] Despacho de ASR por provider em `transcription.rs`
+- [ ] Generalizar chave de revisão por provider em `actions.rs`
+- [ ] UI: fluxo de 3 passos do HTML
+- [ ] Validação (golden test + 5 falas) antes de trocar o default
+- [ ] Build + reinstalação + publicação sem chaves
+
 **Pergunta ao usuário:** corrigir P0/P1 antes do build, ou buildar agora com os bugs conhecidos?

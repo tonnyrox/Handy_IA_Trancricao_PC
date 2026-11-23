@@ -3,189 +3,1471 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Prévia visual — Aba IAs (Handy fork PT-BR, tema escuro)</title>
+<title>Handy — Aba IAs (Escopo Único por Provedor)</title>
 <style>
-  /* Cores copiadas de src/styles/theme.css (tema escuro, --dark-*) */
+  /* ==========================================================================
+     1. DESIGN TOKENS (Paleta escura fiel extraída de src/styles/theme.css)
+     ========================================================================== */
   :root {
     --text: #fbfbfb;               /* --dark-color-text */
     --bg: #2c2b29;                 /* --dark-color-background */
     --blue: #93c5fd;               /* --dark-color-logo-primary */
     --blue-primary: #3b82f6;       /* --color-background-ui */
     --mid-gray: #808080;           /* --color-mid-gray */
-    --line: color-mix(in srgb, var(--mid-gray) 20%, transparent);
-    --line-strong: color-mix(in srgb, var(--mid-gray) 80%, transparent);
+
+    --line: color-mix(in srgb, var(--mid-gray) 22%, transparent);
+    --line-strong: color-mix(in srgb, var(--mid-gray) 55%, transparent);
     --wash: color-mix(in srgb, var(--mid-gray) 10%, transparent);
-    --ink-2: color-mix(in srgb, var(--text) 60%, transparent);
+    --wash-hover: color-mix(in srgb, var(--mid-gray) 16%, transparent);
+    --ink-2: color-mix(in srgb, var(--text) 72%, transparent);
     --ink-3: var(--mid-gray);
-    --panel: color-mix(in srgb, #fff 4%, var(--bg));
+    --panel: color-mix(in srgb, #ffffff 4%, var(--bg));
+    --panel-elevated: color-mix(in srgb, #ffffff 7%, var(--bg));
+
     --moss: #86c9a4;
     --warning: #fbbf24;
     --error: #f87171;
+
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 14px;
   }
-  * { box-sizing: border-box; }
-  body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); }
-  .app { display: flex; min-height: 100vh; }
-  .sidebar { width: 190px; background: var(--panel); border-right: 1px solid var(--line); padding: 14px 10px; }
-  .brand { font-weight: 700; padding: 8px 10px 18px; color: var(--blue); font-size: 18px; }
-  .nav-item { padding: 9px 10px; border-radius: 8px; margin-bottom: 3px; font-size: 13px; color: var(--ink-3); }
-  .nav-item.active { background: color-mix(in srgb, var(--blue) 15%, transparent); color: var(--blue); font-weight: 600; }
-  .main { flex: 1; padding: 22px 28px; max-width: 860px; }
-  .head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-  h1 { font-size: 20px; margin: 0; }
-  .lang-btn { background: transparent; border: 0; color: var(--text); font-size: 13px; text-decoration: underline; cursor: pointer; }
-  .tabs { display: inline-flex; background: var(--wash); border-radius: 9px; padding: 4px; margin-bottom: 18px; }
-  .tab { border: 0; background: transparent; padding: 8px 18px; border-radius: 7px; cursor: pointer; font-size: 13px; color: var(--ink-3); }
-  .tab.active { background: var(--bg); color: var(--text); font-weight: 600; box-shadow: 0 1px 3px #0005; }
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin-bottom: 16px; }
-  .card-title { font-size: 15px; font-weight: 650; margin-bottom: 2px; }
-  .card-desc { font-size: 12px; color: var(--ink-3); margin-bottom: 16px; }
-  label { display: block; font-size: 12px; font-weight: 600; margin: 12px 0 6px; }
-  select, .input { width: 100%; padding: 9px 10px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 13px; }
-  .icon-btn { border: 1px solid var(--line-strong); background: var(--bg); color: var(--ink-3); border-radius: 8px; padding: 9px 11px; cursor: pointer; }
-  .key-row { display: flex; gap: 8px; }
-  .hint { font-size: 12px; color: var(--ink-3); margin-top: 6px; }
-  .separator { border-top: 1px solid var(--line); margin: 14px 0 12px; }
-  .steps { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); font-weight: 700; margin: 16px 0 8px; }
-  .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-  button.btn { border: 1px solid var(--line-strong); background: var(--bg); color: var(--text); padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 12px; }
-  button.btn.primary { background: var(--blue-primary); color: #fff; border-color: var(--blue-primary); }
-  .status { padding: 8px 10px; border-radius: 8px; font-size: 12px; margin-top: 6px; border: 1px solid var(--line); color: var(--ink-2); }
-  .status.ok { border-color: color-mix(in srgb, var(--moss) 40%, transparent); background: color-mix(in srgb, var(--moss) 10%, transparent); color: var(--text); }
-  details { border: 1px solid var(--line); border-radius: 8px; padding: 10px; background: var(--wash); }
-  summary { cursor: pointer; font-size: 12px; color: var(--ink-3); }
-  .model-row { display: flex; align-items: center; gap: 12px; padding: 12px 4px; border-bottom: 1px solid var(--line); font-size: 13px; }
-  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--moss); }
-  .note { font-size: 12px; color: var(--ink-2); margin-top: 12px; padding: 10px; background: var(--wash); border-radius: 8px; }
-  .retired { font-size: 12px; color: var(--warning); padding: 10px; border: 1px solid color-mix(in srgb, var(--warning) 40%, transparent); border-radius: 8px; margin-bottom: 16px; }
-  .hidden { display: none; }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ==========================================================================
+     2. SHELL PRINCIPAL (Sidebar + Área de Conteúdo)
+     ========================================================================== */
+  .app {
+    display: flex;
+    min-height: 100vh;
+  }
+
+  .sidebar {
+    width: 216px;
+    flex-shrink: 0;
+    background: var(--panel);
+    border-right: 1px solid var(--line);
+    padding: 18px 12px;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    padding: 6px 10px 20px;
+    color: var(--blue);
+    font-size: 19px;
+    letter-spacing: -0.01em;
+  }
+
+  .brand-badge {
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--blue) 18%, transparent);
+    border: 1px solid color-mix(in srgb, var(--blue) 35%, transparent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    color: var(--blue);
+  }
+
+  .nav-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .nav-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-3);
+    font-weight: 700;
+    padding: 0 10px 6px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 13.5px;
+    color: var(--ink-3);
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+
+  .nav-item:hover:not(.active) {
+    background: var(--wash);
+    color: var(--text);
+  }
+
+  .nav-item.active {
+    background: color-mix(in srgb, var(--blue) 15%, transparent);
+    color: var(--blue);
+    font-weight: 600;
+    box-shadow: inset 3px 0 0 var(--blue);
+  }
+
+  .nav-icon {
+    width: 16px;
+    height: 16px;
+    opacity: 0.85;
+    flex-shrink: 0;
+  }
+
+  /* ==========================================================================
+     3. ÁREA PRINCIPAL & CABEÇALHO
+     ========================================================================== */
+  .main {
+    flex: 1;
+    padding: 28px 36px 48px;
+    max-width: 940px;
+  }
+
+  .head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 22px;
+  }
+
+  .head-titles h1 {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0 0 4px;
+    letter-spacing: -0.01em;
+  }
+
+  .head-subtitle {
+    font-size: 13px;
+    color: var(--ink-3);
+    margin: 0;
+  }
+
+  .head-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .utility-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding-right: 8px;
+    margin-right: 2px;
+    border-right: 1px solid var(--line);
+  }
+
+  .export-btn {
+    background: transparent;
+    color: var(--ink-3);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 7px 10px;
+    font-size: 11.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+  }
+
+  .export-btn:hover {
+    color: var(--text);
+    border-color: var(--line-strong);
+    background: var(--wash);
+  }
+
+  .lang-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: var(--panel);
+    border: 1px solid var(--line-strong);
+    color: var(--text);
+    font-size: 12.5px;
+    font-weight: 500;
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+  }
+
+  .lang-btn:hover {
+    border-color: var(--blue);
+    background: var(--wash);
+  }
+
+  /* ==========================================================================
+     4. SELETOR DE MODO (Nuvem vs Local — Amplo e destacado)
+     ========================================================================== */
+  .tabs-wrapper {
+    margin-bottom: 22px;
+  }
+
+  .tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    width: 100%;
+    max-width: 460px;
+    background: var(--wash);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    padding: 5px;
+  }
+
+  .tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    border: 1px solid transparent;
+    background: transparent;
+    padding: 10px 22px;
+    min-height: 44px;
+    border-radius: 9px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink-3);
+    transition: all 0.16s ease;
+  }
+
+  .tab:hover:not(.active) {
+    color: var(--text);
+    background: color-mix(in srgb, #ffffff 3%, transparent);
+  }
+
+  .tab.active {
+    background: var(--bg);
+    color: var(--text);
+    font-weight: 650;
+    border-color: var(--line-strong);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
+  }
+
+  .tab.active .tab-icon {
+    color: var(--blue);
+  }
+
+  .tab-icon {
+    width: 17px;
+    height: 17px;
+    flex-shrink: 0;
+  }
+
+  /* ==========================================================================
+     5. CARDS, PASSOS DE ESCOPO ÚNICO E FORMULÁRIOS
+     ========================================================================== */
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    padding: 22px 24px;
+    margin-bottom: 20px;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .card-title {
+    font-size: 16px;
+    font-weight: 650;
+    margin: 0 0 3px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-desc {
+    font-size: 12.5px;
+    color: var(--ink-3);
+    margin: 0;
+  }
+
+  .badge-pill {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--blue) 14%, transparent);
+    color: var(--blue);
+    border: 1px solid color-mix(in srgb, var(--blue) 28%, transparent);
+    white-space: nowrap;
+  }
+
+  .step-block {
+    background: color-mix(in srgb, var(--bg) 55%, transparent);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    padding: 16px 18px;
+    margin-bottom: 16px;
+  }
+
+  .step-block:last-of-type {
+    margin-bottom: 0;
+  }
+
+  .step-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .step-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .step-num {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--blue) 18%, transparent);
+    border: 1px solid color-mix(in srgb, var(--blue) 40%, transparent);
+    color: var(--blue);
+    font-size: 11.5px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .step-title {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-2);
+    font-weight: 700;
+  }
+
+  .step-scope-tag {
+    font-size: 11px;
+    color: var(--ink-3);
+    background: var(--wash);
+    border: 1px solid var(--line);
+    padding: 2px 8px;
+    border-radius: 6px;
+  }
+
+  label {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0 0 7px;
+  }
+
+  select,
+  .input {
+    width: 100%;
+    height: 40px;
+    padding: 0 12px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13.5px;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  select:focus,
+  .input:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--blue) 18%, transparent);
+  }
+
+  .hint {
+    font-size: 12px;
+    color: var(--ink-3);
+    margin-top: 7px;
+  }
+
+  .model-tech-desc {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    background: var(--wash);
+    border: 1px solid var(--line);
+    font-size: 12.5px;
+    color: var(--ink-2);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .model-tech-desc svg {
+    color: var(--blue);
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .key-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .icon-btn {
+    height: 40px;
+    width: 40px;
+    border: 1px solid var(--line-strong);
+    background: var(--bg);
+    color: var(--ink-2);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+  }
+
+  .icon-btn:hover {
+    color: var(--text);
+    border-color: var(--blue);
+    background: var(--wash);
+  }
+
+  /* Acordeão Avançado (opcional) */
+  details {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    background: var(--wash);
+    margin-top: 12px;
+  }
+
+  summary {
+    cursor: pointer;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--ink-2);
+    user-select: none;
+  }
+
+  summary:hover {
+    color: var(--text);
+  }
+
+  details[open] summary {
+    margin-bottom: 10px;
+    color: var(--blue);
+  }
+
+  /* Barra de Ações (Verificar chave, Testar modelo, Aplicar) */
+  .actions-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+  }
+
+  .actions-left {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  button.btn {
+    height: 36px;
+    border: 1px solid var(--line-strong);
+    background: var(--bg);
+    color: var(--text);
+    padding: 0 14px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 12.5px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+  }
+
+  button.btn:hover {
+    background: var(--wash-hover);
+    border-color: var(--text);
+  }
+
+  button.btn.primary {
+    background: var(--blue-primary);
+    color: #ffffff;
+    border-color: var(--blue-primary);
+    font-weight: 600;
+    padding: 0 18px;
+  }
+
+  button.btn.primary:hover {
+    filter: brightness(1.08);
+  }
+
+  /* Painel Consolidado de Status */
+  .status-panel {
+    margin-top: 14px;
+    border: 1px solid color-mix(in srgb, var(--moss) 35%, transparent);
+    background: color-mix(in srgb, var(--moss) 8%, transparent);
+    border-radius: var(--radius-sm);
+    padding: 11px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+  }
+
+  .status-panel.warn {
+    border-color: color-mix(in srgb, var(--error) 45%, transparent);
+    background: color-mix(in srgb, var(--error) 8%, transparent);
+  }
+
+  .status-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    color: var(--text);
+  }
+
+  .status-icon {
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .status-icon.ok {
+    color: var(--moss);
+  }
+
+  .status-icon.err {
+    color: var(--error);
+  }
+
+  .status-icon.pending {
+    color: var(--warning);
+  }
+
+  /* ==========================================================================
+     6. GUIA LOCAL (Modelos instalados e compatíveis — clicáveis)
+     ========================================================================== */
+  .retired {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12.5px;
+    color: var(--warning);
+    padding: 11px 14px;
+    background: color-mix(in srgb, var(--warning) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--warning) 35%, transparent);
+    border-radius: var(--radius-sm);
+    margin-bottom: 18px;
+  }
+
+  .local-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+
+  .model-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 10px;
+    margin: 0 -6px;
+    border-radius: var(--radius-sm);
+    border-bottom: 1px solid var(--line);
+    font-size: 13.5px;
+    cursor: pointer;
+    transition: background-color 0.14s ease;
+  }
+
+  .model-row:hover {
+    background: var(--wash);
+  }
+
+  .model-row:last-of-type {
+    border-bottom: none;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--ink-3);
+    flex-shrink: 0;
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .model-row.selected .dot {
+    background: var(--moss);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--moss) 22%, transparent);
+  }
+
+  .model-tag {
+    margin-left: auto;
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--moss) 15%, transparent);
+    color: var(--moss);
+    border: 1px solid color-mix(in srgb, var(--moss) 30%, transparent);
+  }
+
+  .model-select-hint {
+    margin-left: auto;
+    font-size: 11.5px;
+    color: var(--ink-3);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+
+  .model-row:hover .model-select-hint {
+    opacity: 1;
+  }
+
+  .toggle-more-btn {
+    margin-top: 8px;
+    background: transparent;
+    border: 0;
+    color: var(--blue);
+    font-size: 12.5px;
+    font-weight: 500;
+    padding: 4px 2px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .toggle-more-btn:hover {
+    text-decoration: underline;
+  }
+
+  .note {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 12.5px;
+    color: var(--ink-2);
+    margin-top: 16px;
+    padding: 11px 14px;
+    background: var(--wash);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+  }
+
+  .note-icon {
+    color: var(--blue);
+    flex-shrink: 0;
+  }
+
+  .hidden {
+    display: none !important;
+  }
+
+  /* Toast discreto */
+  .toast {
+    position: fixed;
+    bottom: 18px;
+    right: 18px;
+    background: var(--panel-elevated);
+    color: var(--text);
+    border: 1px solid color-mix(in srgb, var(--moss) 45%, transparent);
+    padding: 10px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 12.5px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+    z-index: 60;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(6px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Responsividade */
+  @media (max-width: 780px) {
+    .app {
+      flex-direction: column;
+    }
+    .sidebar {
+      width: 100%;
+      border-right: none;
+      border-bottom: 1px solid var(--line);
+      padding: 12px 14px;
+    }
+    .brand {
+      padding: 0 0 10px;
+    }
+    .nav-label {
+      display: none;
+    }
+    .nav-group {
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .nav-item {
+      padding: 7px 10px;
+      font-size: 12.5px;
+    }
+    .nav-item.active {
+      box-shadow: none;
+    }
+    .main {
+      padding: 20px 16px 36px;
+    }
+    .head {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .head-actions {
+      justify-content: flex-start;
+    }
+    .local-grid {
+      grid-template-columns: 1fr;
+    }
+    .tabs {
+      max-width: 100%;
+    }
+  }
 </style>
 </head>
 <body>
+
 <div class="app">
+  <!-- ========================================================================
+       BARRA LATERAL DE NAVEGAÇÃO (Sem "Pós-processamento")
+       ======================================================================== -->
   <aside class="sidebar">
-    <div class="brand">Handy</div>
-    <div class="nav-item">Geral</div>
-    <div class="nav-item">Histórico</div>
-    <div class="nav-item active">IAs</div>
-    <div class="nav-item">Pós-processamento</div>
-    <div class="nav-item">Avançado</div>
-    <div class="nav-item">Debug</div>
-    <div class="nav-item">Sobre</div>
-  </aside>
-
-  <main class="main">
-    <div class="head">
-      <h1>IAs</h1>
-      <button class="lang-btn">Alterar idiomas</button>
+    <div class="brand">
+      <span class="brand-badge">H</span>
+      <span>Handy</span>
     </div>
 
-    <div class="tabs" role="tablist">
-      <button class="tab active" role="tab" onclick="show('cloud', this)">Nuvem</button>
-      <button class="tab" role="tab" onclick="show('local', this)">Local</button>
-    </div>
-
-    <!-- GUIA NUVEM -->
-    <section id="cloud">
-      <div class="card">
-        <div class="card-title">Nuvem gratuita</div>
-        <div class="card-desc">Transcrição rápida PT-BR gratuita</div>
-
-        <label>Provedor e modelo</label>
-        <select id="provider" onchange="changeProvider()">
-          <option value="nvidia">Nuvem gratuita</option>
-          <option value="groq" selected>Groq</option>
-        </select>
-        <div class="hint" id="providerHint">GPT-OSS — revisão rápida</div>
-
-        <div class="separator"></div>
-
-        <label>Modelo</label>
-        <select id="model">
-          <option value="openai/gpt-oss-120b" selected>GPT-OSS 120B</option>
-          <option value="openai/gpt-oss-20b">GPT-OSS 20B</option>
-        </select>
-
-        <div class="note">A transcrição usa NVIDIA Riva; a revisão gramatical usa o provedor e o modelo escolhidos acima.</div>
+    <div class="nav-label">Configurações</div>
+    <nav class="nav-group" aria-label="Navegação principal">
+      <div class="nav-item" onclick="selectNav(this, 'Geral')">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span>Geral</span>
       </div>
 
+      <div class="nav-item" onclick="selectNav(this, 'Histórico')">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span>Histórico</span>
+      </div>
+
+      <div class="nav-item active" onclick="selectNav(this, 'IAs')">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 0 1 4 4v2h2a4 4 0 0 1 0 8h-2v2a4 4 0 0 1-8 0v-2H6a4 4 0 0 1 0-8h2V6a4 4 0 0 1 4-4z"/></svg>
+        <span>IAs</span>
+      </div>
+
+      <div class="nav-item" onclick="selectNav(this, 'Avançado')">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+        <span>Avançado</span>
+      </div>
+
+      <div class="nav-item" onclick="selectNav(this, 'Debug')">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+        <span>Debug</span>
+      </div>
+
+      <div class="nav-item" onclick="selectNav(this, 'Sobre')">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <span>Sobre</span>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- ========================================================================
+       CONTEÚDO PRINCIPAL — ABA IAs
+       ======================================================================== -->
+  <main class="main">
+    <!-- Cabeçalho da Página -->
+    <header class="head">
+      <div class="head-titles">
+        <h1 id="pageTitle">IAs</h1>
+        <p class="head-subtitle">Configure o provedor único em nuvem ou selecione um modelo local offline.</p>
+      </div>
+
+      <div class="head-actions">
+        <!-- Utilitário discreto removido automaticamente ao exportar/baixar o HTML limpo -->
+        <div class="utility-group" data-export-exclude="true">
+          <button class="export-btn" type="button" onclick="copyCleanHtml()" title="Copiar código HTML/CSS/JS limpo">Copiar HTML</button>
+          <button class="export-btn" type="button" onclick="downloadCleanHtml()" title="Baixar arquivo HTML limpo">Baixar .html</button>
+        </div>
+
+        <button class="lang-btn" type="button" onclick="showToast('Seletor de idiomas (PT-BR ativo)')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          <span>Alterar idiomas</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Seletor de Modo Ampliado: Nuvem / Local -->
+    <div class="tabs-wrapper">
+      <div class="tabs" role="tablist" aria-label="Modo de processamento de IA">
+        <button class="tab active" role="tab" aria-selected="true" onclick="show('cloud', this)">
+          <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+          <span>Nuvem</span>
+        </button>
+        <button class="tab" role="tab" aria-selected="false" onclick="show('local', this)">
+          <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
+          <span>Local</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ======================================================================
+         GUIA 1: NUVEM (Escopo Único por Provedor — Sem misturar APIs)
+         ====================================================================== -->
+    <section id="cloud">
       <div class="card">
-        <div class="card-title">Configuração NVIDIA</div>
-        <div class="card-desc">Credencial e modelo usados na transcrição em nuvem.</div>
-
-        <div class="steps">1 · Credencial NVIDIA</div>
-        <label>Chave NVIDIA</label>
-        <div class="key-row">
-          <input class="input" type="password" value="••••••••••••••••" readonly />
-          <button class="icon-btn" title="Mostrar/Ocultar chave">👁</button>
-          <button class="icon-btn" title="Remover chave">🗑</button>
-        </div>
-        <div class="hint">Informe a chave da NVIDIA para carregar modelos e verificar a configuração.</div>
-
-        <details>
-          <summary>Avançado (opcional) — Function-ID do modelo</summary>
-          <div style="margin-top:10px">
-            <input class="input" type="text" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
-            <div class="hint">ID do modelo de voz ativado na sua conta (build.nvidia.com). Atualize se trocar de chave ou de modelo.</div>
+        <div class="card-header">
+          <div>
+            <h2 class="card-title" id="cloudCardTitle">Configuração de Nuvem — Groq</h2>
+            <p class="card-desc">Escopo único: toda a transcrição e processamento usam exclusivamente a API do provedor escolhido.</p>
           </div>
-        </details>
-
-        <div class="steps">2 · Modelo de transcrição</div>
-        <label>Modelo</label>
-        <select>
-          <option selected>NVIDIA Parakeet 1.1B Multilingual (PT-BR)</option>
-        </select>
-        <div class="hint" style="font-weight:600;color:var(--text);margin-top:10px">Ações</div>
-        <div class="row">
-          <button class="btn">Verificar configuração</button>
-          <button class="btn">Verificar modelos</button>
-          <button class="btn primary">Aplicar</button>
+          <span class="badge-pill" id="providerBadge">API Única · Groq</span>
         </div>
-        <div class="hint">Modelo usado na transcrição em nuvem. A pontuação é feita pelo revisor escolhido acima.</div>
-        <div class="status ok"><b>Verificar configuração:</b> Configuração verificada com sucesso.</div>
-        <div class="status ok"><b>Verificar modelos:</b> Modelos verificados com áudio.</div>
-        <div class="status ok"><b>Aplicar:</b> Configuração aplicada.</div>
+
+        <!-- PASSO 1: SELEÇÃO DO PROVEDOR -->
+        <div class="step-block">
+          <div class="step-header">
+            <div class="step-header-left">
+              <span class="step-num">1</span>
+              <span class="step-title">Provedor</span>
+            </div>
+            <span class="step-scope-tag">Provedor exclusivo ativo</span>
+          </div>
+
+          <label for="provider">Selecione o provedor</label>
+          <select id="provider" onchange="onProviderChange()">
+            <option value="groq" selected>Groq</option>
+            <option value="nvidia">NVIDIA</option>
+          </select>
+          <div class="hint" id="providerHint">
+            Escopo único: toda a transcrição e processamento usam exclusivamente a API da Groq.
+          </div>
+        </div>
+
+        <!-- PASSO 2: CHAVE API KEY (Dinâmica para o provedor selecionado) -->
+        <div class="step-block">
+          <div class="step-header">
+            <div class="step-header-left">
+              <span class="step-num">2</span>
+              <span class="step-title">Chave API Key</span>
+            </div>
+            <span class="step-scope-tag" id="keyScopeTag">Groq API</span>
+          </div>
+
+          <label for="apiKeyInput">Chave API Key</label>
+          <div class="key-row">
+            <input id="apiKeyInput" class="input" type="password" value="••••••••••••••••••••••••" placeholder="gsk_..." oninput="onKeyInput()" />
+            <button class="icon-btn" type="button" title="Mostrar/Ocultar Chave API Key" onclick="toggleKeyVisibility()">
+              <svg id="eyeIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+            <button class="icon-btn" type="button" title="Limpar/Remover Chave API Key" onclick="clearApiKey()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+          </div>
+          <div class="hint" id="apiKeyHint">
+            Insira sua Chave API Key obtida em console.groq.com para autenticar os modelos da Groq.
+          </div>
+        </div>
+
+        <!-- PASSO 3: MODELO (Apenas um seletor exclusivo do provedor selecionado) -->
+        <div class="step-block">
+          <div class="step-header">
+            <div class="step-header-left">
+              <span class="step-num">3</span>
+              <span class="step-title">Modelo do Provedor</span>
+            </div>
+            <span class="step-scope-tag" id="modelScopeTag">Modelos Groq</span>
+          </div>
+
+          <label for="providerModel">Modelo</label>
+          <select id="providerModel" onchange="onModelChange()">
+            <!-- Preenchido dinamicamente pelo JS conforme o provedor -->
+          </select>
+
+          <div class="model-tech-desc">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <span id="modelTechDescription">Whisper Large v3 Turbo (Groq): transcrição multilíngue de ultra baixa latência via API única da Groq.</span>
+          </div>
+
+          <!-- Avançado (opcional) específico do provedor atual -->
+          <details id="advancedDetails">
+            <summary id="advancedSummary">Avançado (opcional) — Endpoint personalizado da Groq</summary>
+            <div>
+              <label id="advancedLabel" for="advancedInput" style="margin-top:4px">Base URL / Endpoint (opcional)</label>
+              <input id="advancedInput" class="input" type="text" placeholder="https://api.groq.com/openai/v1" />
+              <div class="hint" id="advancedHint">Deixe em branco para usar o endpoint oficial padrão da Groq.</div>
+            </div>
+          </details>
+
+          <!-- Barra de Ações -->
+          <div class="actions-bar">
+            <div class="actions-left">
+              <button class="btn" type="button" onclick="verifyApiKey()">Verificar chave</button>
+              <button class="btn" type="button" onclick="testSelectedModel()">Testar modelo</button>
+            </div>
+            <button class="btn primary" type="button" onclick="applyProviderConfig()">Aplicar</button>
+          </div>
+
+          <!-- Painel Consolidado de Status -->
+          <div id="statusPanel" class="status-panel" aria-live="polite">
+            <div id="statusKeyLine" class="status-line">
+              <span class="status-icon ok">✓</span>
+              <span><b>Verificar chave:</b> Chave API Key da Groq validada com sucesso.</span>
+            </div>
+            <div id="statusModelLine" class="status-line">
+              <span class="status-icon ok">✓</span>
+              <span><b>Testar modelo:</b> Whisper Large v3 Turbo (Groq) respondeu ao teste de áudio.</span>
+            </div>
+            <div id="statusApplyLine" class="status-line">
+              <span class="status-icon ok">✓</span>
+              <span><b>Aplicar:</b> Escopo único ativo com Groq.</span>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
-    <!-- GUIA LOCAL -->
+    <!-- ======================================================================
+         GUIA 2: LOCAL (Modelos offline clicáveis)
+         ====================================================================== -->
     <section id="local" class="hidden">
-      <div class="retired">Aviso sobre modelos aposentados</div>
-      <div class="card">
-        <div class="card-title">Seus modelos 🔄</div>
-        <div class="model-row"><span class="dot"></span> whisper-small <span style="margin-left:auto;color:var(--ink-3)">em uso</span></div>
-        <div class="model-row"><span class="dot"></span> parakeet-v3</div>
-        <div class="hint">Mostrar mais 2 modelos ⌄</div>
+      <div class="retired">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span>Aviso sobre modelos aposentados</span>
       </div>
+
+      <!-- Seus Modelos -->
       <div class="card">
-        <div class="card-title">Compatíveis com seu idioma</div>
-        <div class="model-row"><span class="dot"></span> whisper-medium</div>
-        <div class="model-row"><span class="dot"></span> whisper-large</div>
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Seus modelos</h2>
+            <p class="card-desc">Clique em um modelo baixado para defini-lo como ativo no dispositivo.</p>
+          </div>
+          <button class="btn" type="button" onclick="showToast('Lista de modelos locais atualizada')" title="Atualizar lista">
+            <span>Atualizar</span>
+          </button>
+        </div>
+
+        <div class="model-row selected" data-local-model="whisper-small" onclick="selectLocalModel(this)">
+          <span class="dot"></span>
+          <span>whisper-small</span>
+          <span class="model-tag">em uso</span>
+        </div>
+        <div class="model-row" data-local-model="parakeet-v3" onclick="selectLocalModel(this)">
+          <span class="dot"></span>
+          <span>parakeet-v3</span>
+          <span class="model-select-hint">Clique para usar</span>
+        </div>
+
+        <div id="extraLocalModels" class="hidden">
+          <div class="model-row" data-local-model="whisper-base" onclick="selectLocalModel(this)">
+            <span class="dot"></span>
+            <span>whisper-base</span>
+            <span class="model-select-hint">Clique para usar</span>
+          </div>
+          <div class="model-row" data-local-model="whisper-tiny" onclick="selectLocalModel(this)">
+            <span class="dot"></span>
+            <span>whisper-tiny</span>
+            <span class="model-select-hint">Clique para usar</span>
+          </div>
+        </div>
+
+        <button id="toggleMoreLocal" class="toggle-more-btn" type="button" onclick="toggleMoreModels()">
+          Mostrar mais 2 modelos ⌄
+        </button>
       </div>
-      <div class="card">
-        <div class="card-title">Parcialmente compatíveis</div>
-        <div class="model-row"><span class="dot"></span> moonshine-tiny</div>
+
+      <!-- Compatibilidade -->
+      <div class="local-grid">
+        <div class="card" style="margin-bottom:0">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Compatíveis com seu idioma</h2>
+              <p class="card-desc">Recomendados para português (PT-BR).</p>
+            </div>
+          </div>
+          <div class="model-row" data-local-model="whisper-medium" onclick="selectLocalModel(this)">
+            <span class="dot"></span>
+            <span>whisper-medium</span>
+            <span class="model-select-hint">Selecionar</span>
+          </div>
+          <div class="model-row" data-local-model="whisper-large" onclick="selectLocalModel(this)">
+            <span class="dot"></span>
+            <span>whisper-large</span>
+            <span class="model-select-hint">Selecionar</span>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:0">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Parcialmente compatíveis</h2>
+              <p class="card-desc">Funcionam com limitações de vocabulário.</p>
+            </div>
+          </div>
+          <div class="model-row" data-local-model="moonshine-tiny" onclick="selectLocalModel(this)">
+            <span class="dot"></span>
+            <span>moonshine-tiny</span>
+            <span class="model-select-hint">Selecionar</span>
+          </div>
+        </div>
       </div>
-      <div class="note">3 modelos não testados estão ocultos. Use a busca para encontrá-los.</div>
+
+      <div class="note">
+        <svg class="note-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <span>3 modelos não testados estão ocultos. Use a busca para encontrá-los.</span>
+      </div>
     </section>
   </main>
 </div>
 
+<div id="toast" class="toast" data-export-exclude="true"></div>
+
 <script>
+  /**
+   * Catálogo isolado por provedor (Escopo Único: sem misturar APIs).
+   * Facilita o mapeamento direto para structs/enums no backend em Rust.
+   */
+  const PROVIDERS_CONFIG = {
+    groq: {
+      name: 'Groq',
+      badge: 'API Única · Groq',
+      cardTitle: 'Configuração de Nuvem — Groq',
+      providerHint: 'Escopo único: toda a transcrição e processamento usam exclusivamente a API da Groq.',
+      keyScopeTag: 'Groq API',
+      keyPlaceholder: 'gsk_...',
+      keyHint: 'Insira sua Chave API Key obtida em console.groq.com para autenticar os modelos da Groq.',
+      demoKey: 'gsk_demo98a7f6e5d4c3b2a19081726354',
+      modelScopeTag: 'Modelos Groq',
+      advancedSummary: 'Avançado (opcional) — Endpoint personalizado da Groq',
+      advancedLabel: 'Base URL / Endpoint (opcional)',
+      advancedPlaceholder: 'https://api.groq.com/openai/v1',
+      advancedHint: 'Deixe em branco para usar o endpoint oficial padrão da Groq.',
+      models: [
+        {
+          id: 'whisper-large-v3-turbo',
+          label: 'Whisper Large v3 Turbo (Groq)',
+          description: 'Whisper Large v3 Turbo (Groq): transcrição multilíngue de ultra baixa latência com suporte nativo a PT-BR via API única da Groq.'
+        },
+        {
+          id: 'whisper-large-v3',
+          label: 'Whisper Large v3 (Groq)',
+          description: 'Whisper Large v3 (Groq): máxima precisão acústica e pontuação contextual em português via API única da Groq.'
+        },
+        {
+          id: 'distil-whisper-large-v3-en',
+          label: 'Distil-Whisper English (Groq)',
+          description: 'Distil-Whisper English (Groq): modelo destilado otimizado exclusivamente para ditado rápido em inglês.'
+        }
+      ]
+    },
+    nvidia: {
+      name: 'NVIDIA',
+      badge: 'API Única · NVIDIA',
+      cardTitle: 'Configuração de Nuvem — NVIDIA',
+      providerHint: 'Escopo único: toda a transcrição e processamento usam exclusivamente a API da NVIDIA.',
+      keyScopeTag: 'NVIDIA API',
+      keyPlaceholder: 'nvapi-...',
+      keyHint: 'Insira sua Chave API Key gerada em build.nvidia.com para autenticar os modelos da NVIDIA.',
+      demoKey: 'nvapi-demo71c2b9a8e4f03d6519283746',
+      modelScopeTag: 'Modelos NVIDIA',
+      advancedSummary: 'Avançado (opcional) — Function-ID do modelo NVIDIA',
+      advancedLabel: 'Function-ID (opcional)',
+      advancedPlaceholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+      advancedHint: 'ID da função ativada na sua conta build.nvidia.com. Preencha apenas se usar um deployment customizado.',
+      models: [
+        {
+          id: 'parakeet-1.1b-multilingual',
+          label: 'NVIDIA Parakeet 1.1B Multilingual (PT-BR)',
+          description: 'NVIDIA Parakeet 1.1B Multilingual (PT-BR): reconhecimento automático de fala de alta velocidade otimizado para português brasileiro.'
+        },
+        {
+          id: 'canary-1b-multilingual',
+          label: 'NVIDIA Canary 1B Multilingual',
+          description: 'NVIDIA Canary 1B Multilingual: modelo multilíngue de transcrição e tradução com alta precisão em ambientes com ruído.'
+        }
+      ]
+    }
+  };
+
+  // Estado local da tela para simulação fiel
+  const state = {
+    provider: 'groq',
+    keyVisible: false,
+    keysByProvider: {
+      groq: 'gsk_demo98a7f6e5d4c3b2a19081726354',
+      nvidia: 'nvapi-demo71c2b9a8e4f03d6519283746'
+    },
+    selectedModelByProvider: {
+      groq: 'whisper-large-v3-turbo',
+      nvidia: 'parakeet-1.1b-multilingual'
+    },
+    advancedByProvider: {
+      groq: '',
+      nvidia: ''
+    }
+  };
+
+  /**
+   * Alterna entre as guias "Nuvem" e "Local" na tela IAs.
+   */
   function show(tab, btn) {
     document.getElementById('cloud').classList.toggle('hidden', tab !== 'cloud');
     document.getElementById('local').classList.toggle('hidden', tab !== 'local');
-    document.querySelectorAll('.tab').forEach((b) => b.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach((b) => {
+      b.classList.remove('active');
+      b.setAttribute('aria-selected', 'false');
+    });
     btn.classList.add('active');
+    btn.setAttribute('aria-selected', 'true');
   }
-  function changeProvider() {
-    const p = document.getElementById('provider').value;
-    document.getElementById('providerHint').textContent =
-      p === 'nvidia' ? 'Transcrição rápida PT-BR gratuita' : 'GPT-OSS — revisão rápida';
-    const model = document.getElementById('model');
-    model.innerHTML = p === 'nvidia'
-      ? '<option selected>Nemotron 3.5 Lightning 30B</option><option>Nemotron 3.5 Bolt E4B</option>'
-      : '<option selected>GPT-OSS 120B</option><option>GPT-OSS 20B</option>';
+
+  /**
+   * Atualiza toda a interface da aba Nuvem para refletir exclusivamente o provedor escolhido.
+   */
+  function onProviderChange() {
+    const providerKey = document.getElementById('provider').value;
+    state.provider = providerKey;
+    const cfg = PROVIDERS_CONFIG[providerKey];
+
+    // Cabeçalho do card e badges de escopo único
+    document.getElementById('cloudCardTitle').textContent = cfg.cardTitle;
+    document.getElementById('providerBadge').textContent = cfg.badge;
+    document.getElementById('providerHint').textContent = cfg.providerHint;
+
+    // Passo 2: Chave API Key
+    document.getElementById('keyScopeTag').textContent = cfg.keyScopeTag;
+    const keyInput = document.getElementById('apiKeyInput');
+    keyInput.placeholder = cfg.keyPlaceholder;
+    keyInput.value = state.keysByProvider[providerKey] || '';
+    keyInput.type = state.keyVisible ? 'text' : 'password';
+    document.getElementById('apiKeyHint').textContent = cfg.keyHint;
+
+    // Passo 3: Modelo único do provedor
+    document.getElementById('modelScopeTag').textContent = cfg.modelScopeTag;
+    const modelSelect = document.getElementById('providerModel');
+    const savedModelId = state.selectedModelByProvider[providerKey];
+    modelSelect.innerHTML = cfg.models
+      .map((m) => `<option value="${m.id}" ${m.id === savedModelId ? 'selected' : ''}>${m.label}</option>`)
+      .join('');
+
+    // Avançado (opcional)
+    document.getElementById('advancedSummary').textContent = cfg.advancedSummary;
+    document.getElementById('advancedLabel').textContent = cfg.advancedLabel;
+    const advInput = document.getElementById('advancedInput');
+    advInput.placeholder = cfg.advancedPlaceholder;
+    advInput.value = state.advancedByProvider[providerKey] || '';
+    document.getElementById('advancedHint').textContent = cfg.advancedHint;
+
+    onModelChange(true);
   }
+
+  /**
+   * Atualiza a descrição técnica quando o usuário troca o modelo dentro do provedor atual.
+   */
+  function onModelChange(fromProviderSwitch = false) {
+    const cfg = PROVIDERS_CONFIG[state.provider];
+    const modelSelect = document.getElementById('providerModel');
+    const selectedId = modelSelect.value;
+    state.selectedModelByProvider[state.provider] = selectedId;
+
+    const modelObj = cfg.models.find((m) => m.id === selectedId) || cfg.models[0];
+    document.getElementById('modelTechDescription').textContent = modelObj.description;
+
+    if (!fromProviderSwitch) {
+      updateStatusPanel(true, modelObj);
+    } else {
+      updateStatusPanel(true, modelObj);
+    }
+  }
+
+  /**
+   * Salva a digitação da Chave API Key no estado do provedor ativo.
+   */
+  function onKeyInput() {
+    state.keysByProvider[state.provider] = document.getElementById('apiKeyInput').value;
+  }
+
+  /**
+   * Alterna visibilidade da Chave API Key (olho).
+   */
+  function toggleKeyVisibility() {
+    state.keyVisible = !state.keyVisible;
+    const keyInput = document.getElementById('apiKeyInput');
+    keyInput.type = state.keyVisible ? 'text' : 'password';
+  }
+
+  /**
+   * Limpa a Chave API Key do provedor ativo para permitir nova inserção.
+   */
+  function clearApiKey() {
+    const cfg = PROVIDERS_CONFIG[state.provider];
+    state.keysByProvider[state.provider] = '';
+    const keyInput = document.getElementById('apiKeyInput');
+    keyInput.value = '';
+    keyInput.type = 'text';
+    state.keyVisible = true;
+    keyInput.focus();
+
+    const panel = document.getElementById('statusPanel');
+    panel.classList.add('warn');
+    document.getElementById('statusKeyLine').innerHTML =
+      `<span class="status-icon err">✕</span><span><b>Verificar chave:</b> Nenhuma Chave API Key informada para ${cfg.name}.</span>`;
+    showToast(`Chave API Key de ${cfg.name} removida.`);
+  }
+
+  /**
+   * Valida a Chave API Key do provedor ativo.
+   */
+  function verifyApiKey() {
+    const cfg = PROVIDERS_CONFIG[state.provider];
+    const currentKey = (document.getElementById('apiKeyInput').value || '').trim();
+    const panel = document.getElementById('statusPanel');
+
+    if (!currentKey) {
+      panel.classList.add('warn');
+      document.getElementById('statusKeyLine').innerHTML =
+        `<span class="status-icon err">✕</span><span><b>Verificar chave:</b> Informe uma Chave API Key válida (${cfg.keyPlaceholder}).</span>`;
+      showToast(`Informe a Chave API Key de ${cfg.name}.`);
+      return;
+    }
+
+    panel.classList.remove('warn');
+    document.getElementById('statusKeyLine').innerHTML =
+      `<span class="status-icon ok">✓</span><span><b>Verificar chave:</b> Chave API Key de ${cfg.name} autenticada com sucesso.</span>`;
+    showToast(`Chave API Key de ${cfg.name} verificada!`);
+  }
+
+  /**
+   * Testa o modelo selecionado dentro do provedor ativo.
+   */
+  function testSelectedModel() {
+    const cfg = PROVIDERS_CONFIG[state.provider];
+    const currentKey = (document.getElementById('apiKeyInput').value || '').trim();
+    const modelSelect = document.getElementById('providerModel');
+    const modelLabel = modelSelect.options[modelSelect.selectedIndex].text;
+    const panel = document.getElementById('statusPanel');
+
+    if (!currentKey) {
+      panel.classList.add('warn');
+      document.getElementById('statusModelLine').innerHTML =
+        `<span class="status-icon err">✕</span><span><b>Testar modelo:</b> Configure a Chave API Key de ${cfg.name} antes de testar.</span>`;
+      showToast('Configure a Chave API Key primeiro.');
+      return;
+    }
+
+    panel.classList.remove('warn');
+    document.getElementById('statusModelLine').innerHTML =
+      `<span class="status-icon ok">✓</span><span><b>Testar modelo:</b> ${modelLabel} respondeu ao teste de áudio.</span>`;
+    showToast(`Modelo ${modelLabel} testado com sucesso!`);
+  }
+
+  /**
+   * Aplica a configuração de escopo único do provedor ativo.
+   */
+  function applyProviderConfig() {
+    const cfg = PROVIDERS_CONFIG[state.provider];
+    const currentKey = (document.getElementById('apiKeyInput').value || '').trim();
+    const modelSelect = document.getElementById('providerModel');
+    const modelLabel = modelSelect.options[modelSelect.selectedIndex].text;
+    state.advancedByProvider[state.provider] = document.getElementById('advancedInput').value;
+
+    const panel = document.getElementById('statusPanel');
+    if (!currentKey) {
+      panel.classList.add('warn');
+      document.getElementById('statusApplyLine').innerHTML =
+        `<span class="status-icon err">✕</span><span><b>Aplicar:</b> Não foi possível aplicar sem a Chave API Key de ${cfg.name}.</span>`;
+      showToast('Preencha a Chave API Key para aplicar.');
+      return;
+    }
+
+    panel.classList.remove('warn');
+    document.getElementById('statusApplyLine').innerHTML =
+      `<span class="status-icon ok">✓</span><span><b>Aplicar:</b> Provedor único <strong>${cfg.name}</strong> (${modelLabel}) aplicado.</span>`;
+    showToast(`Configuração de ${cfg.name} aplicada!`);
+  }
+
+  /**
+   * Atualiza o resumo visual do painel de status ao trocar de provedor ou modelo.
+   */
+  function updateStatusPanel(hasKey, modelObj) {
+    const cfg = PROVIDERS_CONFIG[state.provider];
+    const currentKey = (state.keysByProvider[state.provider] || '').trim();
+    const panel = document.getElementById('statusPanel');
+
+    if (!currentKey) {
+      panel.classList.add('warn');
+      document.getElementById('statusKeyLine').innerHTML =
+        `<span class="status-icon err">✕</span><span><b>Verificar chave:</b> Chave API Key de ${cfg.name} pendente.</span>`;
+      document.getElementById('statusModelLine').innerHTML =
+        `<span class="status-icon pending">•</span><span><b>Testar modelo:</b> ${modelObj.label} aguardando chave.</span>`;
+      document.getElementById('statusApplyLine').innerHTML =
+        `<span class="status-icon pending">•</span><span><b>Aplicar:</b> Preencha a Chave API Key de ${cfg.name} para salvar.</span>`;
+      return;
+    }
+
+    panel.classList.remove('warn');
+    document.getElementById('statusKeyLine').innerHTML =
+      `<span class="status-icon ok">✓</span><span><b>Verificar chave:</b> Chave API Key de ${cfg.name} validada com sucesso.</span>`;
+    document.getElementById('statusModelLine').innerHTML =
+      `<span class="status-icon ok">✓</span><span><b>Testar modelo:</b> ${modelObj.label} pronto para transcrição.</span>`;
+    document.getElementById('statusApplyLine').innerHTML =
+      `<span class="status-icon ok">✓</span><span><b>Aplicar:</b> Escopo único ativo com ${cfg.name}.</span>`;
+  }
+
+  /**
+   * Permite clicar e selecionar o modelo ativo na aba Local.
+   */
+  function selectLocalModel(rowEl) {
+    const modelName = rowEl.getAttribute('data-local-model');
+    document.querySelectorAll('#local .model-row').forEach((row) => {
+      row.classList.remove('selected');
+      const existingTag = row.querySelector('.model-tag');
+      if (existingTag) {
+        existingTag.remove();
+        const hintSpan = document.createElement('span');
+        hintSpan.className = 'model-select-hint';
+        hintSpan.textContent = 'Clique para usar';
+        row.appendChild(hintSpan);
+      }
+    });
+
+    rowEl.classList.add('selected');
+    const hint = rowEl.querySelector('.model-select-hint');
+    if (hint) hint.remove();
+
+    const badge = document.createElement('span');
+    badge.className = 'model-tag';
+    badge.textContent = 'em uso';
+    rowEl.appendChild(badge);
+
+    showToast(`Modelo local "${modelName}" selecionado.`);
+  }
+
+  /**
+   * Expande/recolhe modelos extras na guia Local.
+   */
+  function toggleMoreModels() {
+    const extra = document.getElementById('extraLocalModels');
+    const toggle = document.getElementById('toggleMoreLocal');
+    const isHidden = extra.classList.toggle('hidden');
+    toggle.textContent = isHidden ? 'Mostrar mais 2 modelos ⌄' : 'Mostrar menos modelos ⌃';
+  }
+
+  /**
+   * Mantém a navegação lateral interativa destacando a seção atual.
+   */
+  function selectNav(el, name) {
+    document.querySelectorAll('.nav-item').forEach((item) => item.classList.remove('active'));
+    el.classList.add('active');
+    if (name !== 'IAs') {
+      showToast('Visualização atual fixada na tela "IAs" (item "' + name + '" selecionado)');
+    }
+  }
+
+  /**
+   * Exibe notificação discreta no tema escuro.
+   */
+  let toastTimer;
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+  }
+
+  /**
+   * Gera o código-fonte limpo sem os botões utilitários de exportação.
+   */
+  function getCleanSourceCode() {
+    const clone = document.documentElement.cloneNode(true);
+    clone.querySelectorAll('[data-export-exclude="true"]').forEach((el) => el.remove());
+    return '<!DOCTYPE html>\n' + clone.outerHTML;
+  }
+
+  function copyCleanHtml() {
+    const source = getCleanSourceCode();
+    const textarea = document.createElement('textarea');
+    textarea.value = source;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      document.execCommand('copy');
+      showToast('Código HTML/CSS/JS limpo copiado!');
+    } catch (e) {
+      showToast('Não foi possível copiar automaticamente.');
+    }
+    document.body.removeChild(textarea);
+  }
+
+  function downloadCleanHtml() {
+    const source = getCleanSourceCode();
+    const blob = new Blob([source], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'handy-ias-escopo-unico.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Arquivo handy-ias-escopo-unico.html baixado!');
+  }
+
+  // Inicializa o estado padrão (Groq) ao carregar a página
+  onProviderChange();
 </script>
 </body>
 </html>
