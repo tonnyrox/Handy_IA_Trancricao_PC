@@ -31,7 +31,7 @@ pub fn classify_riva_error(err: &tonic::Status) -> String {
     );
 
     if is_auth {
-        return "Chave NVIDIA inválida ou expirada. Gere uma nova chave em https://build.nvidia.com/settings/api-keys e cole em Configurações > Modelos. Se o modelo foi trocado, atualize também o Function-ID."
+        return "Chave NVIDIA inválida ou expirada. Gere uma nova chave em https://build.nvidia.com/settings/api-keys e cole em Configurações > IAs. Se o modelo foi trocado, atualize também o Function-ID."
             .to_string();
     }
     // Limite do plano gratuito (429 / ResourceExhausted) tem mensagem própria.

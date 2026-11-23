@@ -191,6 +191,10 @@ impl AnthropicMessagesResponse {
 }
 
 /// Build headers for API requests based on provider type
+/// Mesmo UA usado no client — some provedores (Groq/Cloudflare) rejeitam o
+/// user-agent padrão com HTTP 1010. Não pode divergir do `shared_client()`.
+const BROWSER_USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36";
+
 fn build_headers(provider: &PostProcessProvider, api_key: &str) -> Result<HeaderMap, String> {
     let mut headers = HeaderMap::new();
 
@@ -200,10 +204,7 @@ fn build_headers(provider: &PostProcessProvider, api_key: &str) -> Result<Header
         REFERER,
         HeaderValue::from_static("https://github.com/cjpais/Handy"),
     );
-    headers.insert(
-        USER_AGENT,
-        HeaderValue::from_static("Handy/1.0 (+https://github.com/cjpais/Handy)"),
-    );
+    headers.insert(USER_AGENT, HeaderValue::from_static(BROWSER_USER_AGENT));
     headers.insert("X-Title", HeaderValue::from_static("Handy"));
 
     // Provider-specific auth headers
@@ -255,7 +256,7 @@ fn shared_client() -> Result<&'static reqwest::Client, String> {
     let client = reqwest::Client::builder()
         // Alguns provedores (ex.: Groq/Cloudflare) rejeitam o user-agent padrão
         // do reqwest com HTTP 1010. Um UA comum de navegador evita o bloqueio.
-        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36")
+        .user_agent(BROWSER_USER_AGENT)
         .pool_idle_timeout(Duration::from_secs(30))
         .tcp_keepalive(Duration::from_secs(15))
         .connect_timeout(Duration::from_secs(10))

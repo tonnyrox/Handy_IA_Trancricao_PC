@@ -299,6 +299,16 @@ async fn post_process_transcription(
             .unwrap_or_default()
     };
 
+    // Instalação nova: sem chave para o provider ativo, pula a revisão em
+    // silêncio — colar o texto cru E mostrar aviso de falha confunde o usuário.
+    if api_key.trim().is_empty() {
+        debug!(
+            "Post-processing skipped: provider '{}' has no API key configured",
+            provider.id
+        );
+        return PostProcessOutcome::Skipped;
+    }
+
     // Ask these providers to skip reasoning/thinking — post-processing rarely
     // benefits from it and it adds seconds of latency. llm_client picks the
     // field the endpoint understands and retries without it if rejected.

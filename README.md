@@ -10,7 +10,7 @@ Este repositório contém uma versão personalizada do **[Handy](https://github.
 - **Tema azul:** acento/brand da interface trocado de rosa/magenta para azul (tema claro e escuro), via tokens CSS.
 - **Transcrição cloud NVIDIA (PT-BR):** novo motor de transcrição em nuvem via **NVIDIA Riva ASR (Parakeet 1.1B Multilingual)** sobre gRPC, com idioma nativo `pt-BR`. Rápido (~3s), preciso e **sem exigir saldo/crédito** (diferente de OpenRouter, que exige saldo mínimo para áudio).
 - **Revisão gramatical PT-BR via Groq:** toda fala passa por um LLM (`openai/gpt-oss-120b`) que corrige pontuação (vírgulas, `?`, `!`, `.`), acentuação, concordância, regência e crase, preservando o conteúdo. A chave Groq fica apenas na configuração local do app — nunca no repositório. Ver `MELHORIAS_TRANSCRICAO_PTBR.md`.
-- **Sem etapas de onboarding:** o app abre direto na interface principal; a configuração é feita em **Configurações → Modelos**.
+- **Sem etapas de onboarding:** o app abre direto na interface principal; a configuração é feita em **Configurações → IAs** (guias Nuvem e Local).
 - **Botões Verificar / Aplicar** para o modelo cloud; modelo aplicado é refletido como ativo na lista de modelos.
 - **Ferramentas de teste rápido** (sem buildar): `teste_rapido.py`, `teste_mic.py` (+ `.bat`), `riva_asr.py`.
 
@@ -51,7 +51,7 @@ O motor de nuvem usa o modelo **Parakeet 1.1B Multilingual** da NVIDIA pelo serv
 - **Endpoint:** `grpc.nvcf.nvidia.com:443` (gRPC, RPC `Recognize`)
 - **Idioma:** `pt-BR` (português do Brasil) fixo no protocolo — a saída sempre vem em português
 - **Autenticação:** `Authorization: Bearer <chave NVIDIA>` + `function-id` do modelo ativado na conta (build.nvidia.com)
-- **Configuração no app:** `Configurações → Modelos` → motor **NVIDIA (cloud, API key)** → chave + modelo `nvidia/parakeet-1_1b-rnnt-multilingual-asr` → **Verificar** / **Aplicar**
+- **Configuração no app:** `Configurações → IAs` → motor **NVIDIA (cloud, API key)** → chave + modelo `nvidia/parakeet-1_1b-rnnt-multilingual-asr` → **Verificar** / **Aplicar**
 
 ### Credenciais locais (testes rápidos)
 Os scripts de teste leem as credenciais de um `.env` local (não versionado):
@@ -63,7 +63,7 @@ NVIDIA_FUNCTION_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 
 ### Gestão de chave e verificação de modelos
 
-- A chave NVIDIA expira (cerca de 24h). Em **Configurações → Modelos** você encontra os campos **Chave NVIDIA** e **Function-ID** — atualize ambos quando trocar de chave/modelo (o valor antigo é substituído, nunca acumulado).
+- A chave NVIDIA expira (cerca de 24h). Em **Configurações → IAs** você encontra os campos **Chave NVIDIA** e **Function-ID** — atualize ambos quando trocar de chave/modelo (o valor antigo é substituído, nunca acumulado).
 - Erros de autenticação (401/403) agora mostram uma mensagem clara em português orientando a gerar uma nova chave em https://build.nvidia.com/settings/api-keys.
 - O botão **"Verificar modelos"** usa a **última gravação salva** (`%APPDATA%\com.pais.handy\recordings\`) e testa os modelos da chave "por baixo do pano". Modelos que não transcrevem áudio são **ocultos do dropdown**; restam apenas os que funcionam (hoje, o Parakeet via Riva gRPC). Se não houver gravação, o app avisa antes de testar.
 
@@ -346,7 +346,7 @@ Nesses locais podem ficar configurações, histórico, modelos (`models/`), hook
 
 ## Teste rápido de transcrição (NVIDIA) — sem buildar
 
-O script [`teste_rapido.py`](teste_rapido.py) testa a transcrição direto na API da NVIDIA usando a **mesma configuração do app** (modelo, prompt pt-BR, thinking ligado, `max_tokens=8192`). Use-o para trocar modelo/prompt e validar a saída em português **em segundos**, sem recompilar o Handy.
+O script [`teste_rapido.py`](teste_rapido.py) testa a transcrição via **Riva gRPC (Parakeet PT-BR)** usando a mesma configuração do app (`riva_asr.py`). Use-o para validar a saída em português **em segundos**, sem recompilar o Handy.
 
 ```powershell
 $py = "<venv>\Scripts\python.exe"
@@ -385,7 +385,7 @@ Ou no PowerShell, na pasta do projeto:
 
 ## Estado atual (versão estabilizada)
 
-Esta versão foi estabilizada com base na auditoria dos planos em `Planos/01-04_PLANO_DE_MELHORIAS.md`:
+Esta versão foi estabilizada com base nas auditorias registradas em `MELHORIAS_TRANSCRICAO_PTBR.md`:
 
 - **Motor NVIDIA Cloud (Parakeet 1.1B via Riva gRPC, PT-BR)** como único motor de nuvem; modelos locais e cloud exibidos em seções separadas (nuvem primeiro, à esquerda; local à direita).
 - **Chave NVIDIA + Function-ID** configuráveis em Configurações → Modelos, com botões independentes: **Verificar configuração** (testa chave/conexão), **Verificar modelos** (testa os modelos com a última gravação e persiste o resultado) e **Aplicar** (salva).

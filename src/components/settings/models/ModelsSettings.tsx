@@ -502,7 +502,7 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
                       key={model.id}
                       type="button"
                       onClick={() => void updatePostProcessModel(activeAiProvider, model.id)}
-                      disabled={isUpdating("post_process_model")}
+                      disabled={isUpdating(`post_process_model:${activeAiProvider}`)}
                       className={`rounded-md border px-2 py-1 text-xs cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-logo-primary ${
                         activeAiModel === model.id
                           ? "border-logo-primary bg-logo-primary/15 text-text"

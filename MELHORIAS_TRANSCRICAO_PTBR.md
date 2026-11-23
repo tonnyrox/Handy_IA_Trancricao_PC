@@ -1062,8 +1062,8 @@ Aplicado em `src/components/settings/models/ModelsSettings.tsx`:
 
 | ID | Problema | Evidência | Correção |
 |---|---|---|---|
-| P0.1 | Revisão ligada por default **sem chave** ⇒ em instalação nova, toda ditção cola texto cru **e** mostra aviso de falha | `settings.rs:777` (true) + `:911` (chave vazia) + `actions.rs:208-210` (gate não checa chave) + `:1046-1051` (notice) | Skip silencioso do LLM quando `api_key` do provider ativo estiver vazia (sem aviso) |
-| P0.2 | User-Agent de navegador **não ativa**: `build_headers` (`llm_client.rs:203-206`) sempre envia `Handy/1.0`, que sobrescreve o UA do `shared_client` (`:255-258`) | reqwest insere headers default só se a chave estiver vaga | Alinhar o UA em `build_headers` ao UA de navegador, ou removê-lo |
+| ~~P0.1~~ ✅ | Revisão ligada por default **sem chave** ⇒ em instalação nova, toda ditção cola texto cru **e** mostra aviso de falha | `settings.rs:777` (true) + `:911` (chave vazia) + `actions.rs:208-210` (gate não checa chave) + `:1046-1051` (notice) | **Corrigido:** `actions.rs` agora retorna `Skipped` sem aviso quando `api_key.trim().is_empty()` |
+| ~~P0.2~~ ✅ | User-Agent de navegador **não ativa**: `build_headers` (`llm_client.rs:203-206`) sempre envia `Handy/1.0`, que sobrescreve o UA do `shared_client` (`:255-258`) | reqwest insere headers default só se a chave estiver vaga | **Corrigido:** constante `BROWSER_USER_AGENT` usada tanto no `shared_client()` quanto no `build_headers()` |
 
 ## 17.3 🟠 P1 — bloqueadores para build seguro
 
@@ -1072,7 +1072,7 @@ Aplicado em `src/components/settings/models/ModelsSettings.tsx`:
 | P1.1 | Binário instalado é de **13:13**, anterior a `01365e5` (UI) e `1f470b5` (IAs) — a nova tela ainda não aparece | Build Tauri + reinstalação |
 | P1.2 | Dropdown oferece Nemotron, mas o app envia **system prompt + `response_format` + `thinking:false`**, diferente do golden test (10/10 com user message simples); além disso `post_process_models["nvidia"]` fica vazio | Validar Nemotron no formato real do app **ou** desabilitar NVIDIA no dropdown até validar |
 | P1.3 | CI `code-quality` vermelho: `check:translations` — 25 idiomas × 27 chaves faltantes (25 do fork + 2 do upstream) | Completar as chaves nos 25 idiomas ou aceitar CI vermelho explicitamente |
-| P1.4 | Loading do chip nunca ativa: `isUpdating("post_process_model")` sem o sufixo do provider (o store usa `post_process_model:<id>`) | Usar a chave com sufixo |
+| ~~P1.4~~ ✅ | Loading do chip nunca ativa: `isUpdating("post_process_model")` sem o sufixo do provider (o store usa `post_process_model:<id>`) | **Corrigido:** `isUpdating(\`post_process_model:${activeAiProvider}\`)` |
 
 ## 17.4 🟡 P2 — inconsistências / dívida
 
@@ -1092,12 +1092,12 @@ Aplicado em `src/components/settings/models/ModelsSettings.tsx`:
 
 ## 17.6 Checklist para buildar com segurança
 
-1. [ ] P0.1 — skip silencioso quando chave vazia
-2. [ ] P0.2 — corrigir UA em `build_headers`
-3. [ ] P1.4 — chave `isUpdating` com sufixo
-4. [ ] P1.2 — validar ou desabilitar Nemotron no dropdown
-5. [ ] P2 — sincronizar documentação (seções, commits, nomes de aba)
-6. [ ] P2 — alinhar default da guia ao critério 16.5.2
+1. [x] P0.1 — skip silencioso quando chave vazia (`actions.rs`)
+2. [x] P0.2 — corrigir UA em `build_headers` (`llm_client.rs`, constante compartilhada)
+3. [x] P1.4 — chave `isUpdating` com sufixo (`ModelsSettings.tsx`)
+4. [ ] P1.2 — validar ou desabilitar Nemotron no dropdown (**adiado** — dropdown mostra, mas usuário pode escolher; risco conhecido)
+5. [x] P2 — sincronizar documentação (seções, commits, nomes de aba em `README.md`, `nvidia_riva.rs`, `INDICE.md`)
+6. [ ] P2 — alinhar default da guia ao critério 16.5.2 (**adiado** — cosmético)
 7. [ ] P0.3/P1.1 — `cargo test --lib` → `bun run build` → `bun run tauri build --no-bundle` → reinstalar preservando `settings_store.json`
 8. [ ] Validar 5 falas do 13.6 + log `Starting LLM post-processing with provider 'groq'`
 9. [ ] Varredura de chaves no staged + publicar

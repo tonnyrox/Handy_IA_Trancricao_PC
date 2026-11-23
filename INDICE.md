@@ -7,7 +7,7 @@ Atualizado em 23/11/2026 (data dos commits). Revisado em 24/11/2026.
 
 | Arquivo | O que contém |
 |---|---|
-| **`MELHORIAS_TRANSCRICAO_PTBR.md`** | Diagnóstico, decisões, plano de melhorias e estado atual da transcrição PT-BR. É o documento vivo do projeto — **toda melhoria vai para cá**. Tem 15 seções + apêndice consolidado. **A seção 13 (PENTIFINO) prevalece sobre as anteriores; a 14 consolida as três análises externas; a 15 planeja a unificação de provedores e a organização da aba Modelos.** |
+| **`MELHORIAS_TRANSCRICAO_PTBR.md`** | Diagnóstico, decisões, plano de melhorias e estado atual da transcrição PT-BR. É o documento vivo do projeto — **toda melhoria vai para cá**. Tem 17 seções + apêndice consolidado. **A seção 17 (auditoria) é o estado mais recente; a 16 registra o layout da aba IAs; a 13 é o plano operacional; as anteriores são histórico.** |
 
 ## 2. Documentação do fork (aplicável ao nosso sistema)
 
