@@ -360,3 +360,49 @@ O usuário relatou: *"a gramática ainda está um pouco ruim, não tão boa assi
 - Provider `nvidia` ativo, modelo `nvidia/nemotron-3.5-lightning-30b-a3b`, prompt `ptbr_grammar_fix`
 - GitHub atualizado até o commit `e37abeb`
 - Repo limpo, sem dados sensíveis versionados
+
+---
+
+## 10. DECISÃO DE 23/11 (tarde): Groq para revisão gramatical
+
+O usuário forneceu `instrucoes-transcricao-ptbr.md` e uma chave **Groq**. O documento recomenda: transcrever + passar por LLM de revisão. **Não vamos trocar o ASR** — o Riva/Parakeet já funciona e é gratuito. Vamos usar Groq **somente na revisão**.
+
+### 10.1 Testes reais feitos na API Groq (23/11)
+
+Chave guardada apenas em `.env` (gitignore) e em `post_process_api_keys.groq` no `settings_store.json` local (fora do repo).
+
+**Nota importante:** a Cloudflare da Groq rejeita o user-agent padrão do Python/`reqwest` com `HTTP 1010`. É obrigatório enviar um `User-Agent` de navegador. Já ajustado em `llm_client.rs` (`shared_client()`).
+
+Prompt usado (do documento, com regra explícita de `?`/`!`) e resultados:
+
+| Frase bruta | `gpt-oss-20b` (0,5–0,9 s) | `gpt-oss-120b` (0,6–0,8 s) |
+|---|---|---|
+| `oi tudo bem eu queria falar que a gente foi la ontem e vimos o resultado depois volta amanha` | `Oi, tudo bem? ... Depois volta amanhã.` | `Oi, tudo bem? ... Depois, volta amanhã.` ✅ |
+| `que horas sao voce sabe` | `Que horas são? Você sabe?` ✅ | `Que horas são? Você sabe?` ✅ |
+| `que legal ganhamos o jogo ontem` | `Que legal! Ganhamos o jogo ontem.` ✅ | `Que legal! Ganhamos o jogo ontem.` ✅ |
+| `eu comprei pra ela um presente e ela agradeceu a mim` | `... e ela agradeceu a mim.` | `... e ela me agradeceu.` ✅ |
+
+**Modelo escolhido:** `openai/gpt-oss-120b` — gramática PT-BR visivelmente melhor, mesma velocidade (~0,7 s). O provider `groq` já existe no código (`settings.rs`, `https://api.groq.com/openai/v1`).
+
+### 10.2 Configuração local aplicada
+
+- `post_process_provider_id`: `groq`
+- `post_process_models.groq`: `openai/gpt-oss-120b`
+- `post_process_api_keys.groq`: chave fornecida (somente local)
+- Prompt `groq_ptbr_reviewer`: o do item 6 do documento + regra de `?`/`!`
+- `post_process_enabled` + `post_process_on_main_shortcut`: `true`
+
+### 10.3 Limites a respeitar (plano gratuito/dev da Groq)
+
+- 8.000 tokens/min por modelo (gpt-oss: 250K TPM no Developer Plan) — para ditados longos, blocos de ~3.000 caracteres.
+- Whisper turbo: 400 RPM / 28.800 s de áudio por dia (não usado agora; Riva continua no ASR).
+- Ao receber 429, fallback para Gemini (implementar depois, se necessário). **[CONFIRMAR]** id do modelo Gemini no painel do Google.
+
+### 10.4 Pendências após esta decisão
+
+- [x] Registrar diagnóstico e plano (seções 9 e 10)
+- [x] Validar chave e modelos Groq na prática
+- [x] Adicionar `User-Agent` no `llm_client.rs` (evita 1010)
+- [ ] Aplicar configuração local com provider `groq`
+- [ ] Rodar `cargo test --lib` + build + reinstalar
+- [ ] Commit/push sem chaves (a chave Groq **nunca** deve entrar no repo)

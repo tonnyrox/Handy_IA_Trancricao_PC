@@ -253,6 +253,9 @@ fn shared_client() -> Result<&'static reqwest::Client, String> {
         return Ok(client);
     }
     let client = reqwest::Client::builder()
+        // Alguns provedores (ex.: Groq/Cloudflare) rejeitam o user-agent padrão
+        // do reqwest com HTTP 1010. Um UA comum de navegador evita o bloqueio.
+        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36")
         .pool_idle_timeout(Duration::from_secs(30))
         .tcp_keepalive(Duration::from_secs(15))
         .connect_timeout(Duration::from_secs(10))
