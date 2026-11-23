@@ -1323,4 +1323,21 @@ Aplicado em `src/`:
 
 **Pendente:** build Tauri + reinstalação para ver as mudanças no app.
 
+### 20.6 Auditoria PRÉ-BUILD (24/11) — antes de gerar o executável
+
+| Verificação | Resultado |
+|---|---|
+| `cargo check --lib` | ✅ exit 0 — `Finished dev profile` (7m50s), 1 warning pré-existente (`Emitter` em `secure_input.rs`) |
+| `bun run lint` | ✅ exit 0 |
+| `bun run build` | ✅ exit 0 (`tsc && vite build`) |
+| `bun run test:keyboard` | ✅ exit 0 — "all assertions passed" |
+| `bun run check:translations` | ⚠️ exit 1 — **1/26 idiomas**; 27 chaves faltantes pré-existentes (seção 17 P1.3). Não é regressão desta rodada; CI `code-quality` permanece vermelho por isso |
+| Referências a seções removidas (`debug`/`advanced`/`postprocessing`) em `App.tsx`/`Sidebar.tsx` | ✅ nenhuma |
+| Chaves reais em arquivos versionados | ✅ 0 |
+| Chaves reais no histórico do git | ✅ 0 |
+| Config local | ✅ provider `groq`, transcrição `nvidia`, modelo `openai/gpt-oss-120b` |
+| Git status | ✅ limpo |
+
+**Veredito:** sem erros bloqueantes. A única pendência é o `check:translations` (pré-existente, documentado). **Liberado para build Tauri.**
+
 **Pergunta ao usuário:** corrigir P0/P1 antes do build, ou buildar agora com os bugs conhecidos?
