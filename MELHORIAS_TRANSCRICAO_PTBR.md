@@ -253,3 +253,55 @@ Casos mínimos para os testes automáticos do corretor (3.2):
 6. Ajustes de prompt (3.5b) e fuzzy com acentos (3.5).
 
 Se quiser, o próximo passo é eu implementar os itens 1 e 2 (são os mais seguros) e te passar o diff para você testar o Caps Lock no Windows, que é a parte que eu não consigo validar daqui.
+
+---
+
+## 8. PENDENTE (urgente): correção gramatical, pontuação e acentuação de verdade
+
+**Diagnóstico confirmado em 23/11/2026:** os itens 1, 2, 3.1, B2, 3.4 e 3.5b foram implementados e os testes passaram (347/347), mas o texto colado **ainda não traz pontuação/vírgulas/acentuação consistentes**. Motivo: o corretor determinístico (3.2) só faz o mínimo — espaço antes de vírgula, maiúscula após ponto e ponto final em frases com 4+ palavras. **Ele não corrige gramática nem acentuação**, e o LLM (que é o que faz isso) estava desligado: `post_process_enabled = false`, `post_process_on_main_shortcut = false` e nenhum provider/modelo/configuração de prompt ativos.
+
+**Meta:** o usuário fala → o app cola o **conteúdo integral**, já corrigido com pontuação, vírgulas, acentuação e gramática PT-BR, sem perder informação e sem traduzir.
+
+### 8.1 Ativar o LLM via API NVIDIA (mesma chave da transcrição)
+
+O código já tem o provider `nvidia` (`settings.rs:885`) apontando para `https://integrate.api.nvidia.com/v1` e reutilizando `nvidia_transcription_api_key()` (`actions.rs:285`). Não precisa de outra chave nem de modelo local.
+
+Modelo escolhido (testado com a API, 0,6 s por fala curta):
+- `nvidia/nemotron-3.5-lightning-30b-a3b`
+- Entrada: `oi tudo bem eu queria falar que a gente foi la ontem e vimos o resultado depois volta amanha`
+- Saída: `Oi, tudo bem? Eu queria falar que a gente foi lá ontem e vimos o resultado. Depois, volta amanhã.`
+
+Outros modelos testados e descartados: `google/gemma-*` (404/timeout), `minimaxai/minimax-m3.1-flash` (precisa de `thinking=false`, 24 s), `z-ai/glm-5.3-flash` e `moonshotai/kimi-k3.1-pro` (timeout), `mistralai/mistral-large-4-1t-a52b` (resposta vazia).
+
+### 8.2 Ajuste de código necessário
+
+- `actions.rs:299`: incluir `"nvidia"` em `disable_reasoning` — sem isso o Nemotron não desliga o modo reasoning e devolve texto vazio.
+- `llm_client.rs:61` (`reasoning_disable_params`): para `integrate.api.nvidia.com`, enviar `thinking: false` (o campo genérico `reasoning_effort: "none"` não é o que esse endpoint espera).
+
+### 8.3 Configuração a aplicar em `settings_store.json` (dados locais, nunca versionar)
+
+```json
+{
+  "post_process_enabled": true,
+  "post_process_on_main_shortcut": true,
+  "post_process_provider_id": "nvidia",
+  "post_process_models": { "nvidia": "nvidia/nemotron-3.5-lightning-30b-a3b" },
+  "post_process_selected_prompt_id": "ptbr_grammar_fix",
+  "post_process_prompts": [
+    {
+      "id": "ptbr_grammar_fix",
+      "name": "Correção gramatical PT-BR",
+      "prompt": "Corrija APENAS acentuação e pontuação (vírgulas, pontos, ? e !) em português do Brasil. PRESERVE TODAS as palavras do original, inclusive advérbios como \"depois\", \"ontem\", \"amanhã\". NÃO troque, remova, adicione ou reordene palavras. NÃO mude a concordância verbal. Exemplo: \"oi tudo bem eu fui la ontem\" -> \"Oi, tudo bem? Eu fui lá ontem.\" Retorne somente o texto corrigido.\n\nTexto: ${output}"
+    }
+  ]
+}
+```
+
+### 8.4 Ordem de execução
+
+1. Atualizar este arquivo com o diagnóstico (feito).
+2. Ajustar `actions.rs` e `llm_client.rs` (item 8.2).
+3. Aplicar a configuração local (item 8.3) — fora do repo.
+4. `cargo test --lib` + `bun run build` + `bun run tauri build --no-bundle`.
+5. Reinstalar preservando a chave e validar com o texto de exemplo acima.
+6. Fazer commit/push **somente das mudanças de código e deste MD** — nunca `.env`, `settings_store.json` ou chaves.

@@ -60,7 +60,14 @@ impl ReasoningParams {
 /// the request is retried without it (see `send_chat_completion_with_schema`).
 fn reasoning_disable_params(provider: &PostProcessProvider) -> ReasoningParams {
     let base_url = provider.base_url.to_lowercase();
-    if base_url.contains("api.deepseek.com") {
+    if base_url.contains("integrate.api.nvidia.com") {
+        // Nemotron (NVIDIA NIM) usa `thinking: false` para desligar o raciocínio.
+        // Sem isso devolve uma resposta vazia no caminho de pós-processamento.
+        ReasoningParams {
+            thinking: Some(serde_json::json!(false)),
+            ..Default::default()
+        }
+    } else if base_url.contains("api.deepseek.com") {
         // DeepSeek rejects reasoning_effort "none" and uses its own field:
         // https://api-docs.deepseek.com/guides/thinking_mode
         ReasoningParams {
@@ -868,6 +875,18 @@ mod tests {
         assert_eq!(json["reasoning"]["effort"], "none");
         assert_eq!(json["reasoning"]["exclude"], true);
         assert!(json.get("thinking").is_none());
+    }
+
+    #[test]
+    fn nvidia_base_url_uses_thinking_false() {
+        let params = reasoning_disable_params(&provider(
+            "nvidia",
+            "https://integrate.api.nvidia.com/v1",
+        ));
+        let json = request_json(params);
+        assert!(json.get("reasoning_effort").is_none());
+        assert!(json.get("reasoning").is_none());
+        assert_eq!(json["thinking"], false);
     }
 
     #[test]
