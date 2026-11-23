@@ -1358,4 +1358,71 @@ Aplicado em `src/`:
 
 **Estado final:** sistema atualizado com o layout IAs (sidebar enxuta, guias alinhadas, badges Ativado/Desativado, escopo único), revisão Groq validada, traduções completas e CI de `check:translations` verde.
 
+---
+
+# 21. ANÁLISE DE DIVERGÊNCIAS: PREVIEW × SISTEMA REAL (23/11)
+
+> Usuário pediu análise do sistema em Rust e que as informações sejam passadas para o `preview-ias.html` + registradas aqui para trabalho futuro. **Nada de código Rust foi alterado nesta rodada.**
+
+## 21.1 Achado central (decisão de produto pendente)
+
+O `preview-ias.html` descreve **"Escopo Único por Provedor"** (Groq faria transcrição **e** revisão com uma chave). O sistema real implementa **arquitetura híbrida declarada**: Riva/Parakeet (NVIDIA) faz o ASR; Groq faz **somente** a revisão (decisão registrada na seção 10, `MELHORIAS...:368`).
+
+**P0 — decidir amanhã:** (A) ajustar o preview à realidade híbrida (recomendado), ou (B) implementar Whisper da Groq como ASR (exige `groq_asr.rs`, novo enum, novos comandos).
+
+## 21.2 Divergências ALTA
+
+| ID | Preview promete | Realidade | Impacto |
+|---|---|---|---|
+| A1 | Groq como ASR (Whisper turbo) | `settings.rs:365-381` só aceita `local`/`nvidia`; `shortcut/mod.rs:1544` rejeita `groq`; **não existe `groq_asr.rs`** | Dropdown "Groq" não afeta a transcrição |
+| A2 | "Aplicar um desativa o outro" (back-end) | Nenhum comando faz isso; só o frontend parcial Nuvem↔Local | Escopo único não é garantido no store |
+| A3 | Botão **Aplicar** atômico | `lib.rs:702-814` não tem comando `apply_provider_config`; UI dispara **6 setters separados** não transacionais | Falha no meio deixa store inconsistente; não valida chave antes de aplicar |
+| A4 | Badge reflete "API em uso" | `ModelsSettings.tsx:99-101` usa só `transcription_provider`; ignora `post_process_provider_id` | Com defaults do fork, mostra "Desativado" para nuvem embora Groq esteja em uso; badge "Desativado" nunca aparece na guia Nuvem |
+
+## 21.3 Divergências MÉDIA
+
+| ID | Item | Situação |
+|---|---|---|
+| B1 | Campo "Base URL da Groq" no preview | Backend rejeita edição para todo provider não-`custom` (`shortcut/mod.rs:1158-1163`) |
+| B2 | Chave Groq dentro da aba IAs | No real está em `post-processing/PostProcessingSettings.tsx:136-154`, fora do Sidebar |
+| B3 | "Verificar chave" / "Testar modelo" da Groq | Não existem — só `test_nvidia_transcription` (NVIDIA ASR) |
+| B4 | `nvidia_transcription_model` | Código morto; UI expõe como se trocasse o modelo (`shortcut/mod.rs:1638`) |
+| B5 | `post_process_on_main_shortcut` | Campo órfão (3 ocorrências, nenhum setter/comando); gate já usa só `post_process_enabled` |
+| B6 | Catálogo de modelos | Preview: Whisper (ASR); real: `gpt-oss-120b/20b` (revisão) |
+| B7 | Premissa "API única" | Real: Riva + Groq = duas chaves, duas funções |
+
+## 21.4 Ressalvas BAIXAS
+
+- `nvidia_riva.rs:98` — retry por texto da mensagem em vez de `tonic::Code`.
+- `nvidia_riva.rs:45-53` — `is_auth_error` sem chamador, com `"401"/"403"` no texto.
+- `shortcut/mod.rs:1653-1656` — workaround `contains("empty")` redundante.
+- `MELHORIAS...:1001` — mensagem "Open Settings > Models" pode existir em `actions.rs` (verificar).
+
+## 21.5 O que JÁ está correto (não é pendência)
+
+User-Agent anti-1010, `disable_reasoning` com groq/nvidia, reasoning params NVIDIA/Groq, B10 (chave do provider ativo), `fidelity_guard`, gate da revisão (sem `needs_llm_polish`), defaults PT-BR, `speech_contexts`, silêncio sem erro, erro de auth por `tonic::Code`, Caps Lock + migração v4, comandos/bindings, zero chaves versionadas.
+
+## 21.6 Pendências para amanhã (ordem)
+
+1. **P0** — decidir destino do preview (A: ajustar à realidade híbrida — recomendado; B: implementar Groq ASR).
+2. **P1** — comando atômico `apply_ai_provider_config` (validar chave + setar provider/modelo + escopo único + persistir numa `write_settings`).
+3. **P1** — escopo único no backend (desativar o outro provedor no mesmo comando).
+4. **P1** — corrigir semântica do badge (transcrição vs revisão) em `ModelsSettings.tsx:99-101`.
+5. **P1** — dar uso real ou remover `nvidia_transcription_model` (B4).
+6. **P1** — remover `post_process_on_main_shortcut` (B5) e corrigir orientações antigas no MD.
+7. **P2** — trazer "Verificar chave"/"Testar modelo" da Groq para a aba IAs (ou removê-los do preview).
+8. **P2** — corrigir/remover campo Base URL da Groq (B1).
+9. **P2** — aproximar catálogo do preview do catálogo real (B6).
+10. **P2** — revisar localização da chave Groq (B2).
+11. **P3** — limpeza de robustez (retry, `is_auth_error`, workaround `empty`, mensagem "Models").
+
+## 21.7 Atualização do preview nesta rodada
+
+O `preview-ias.html` recebeu **observações em comentários** sobre:
+- A decisão de produto (A1/B7) no cabeçalho;
+- Cada item A1–A4, B1–B7 e P3 junto ao elemento correspondente;
+- As abas **Geral**, **Histórico** e **Sobre** (escopo futuro — ainda sem implementação detalhada).
+
+Essas observações ficam **no HTML** para o usuário mexer depois, sem alterar o Rust.
+
 **Pergunta ao usuário:** corrigir P0/P1 antes do build, ou buildar agora com os bugs conhecidos?

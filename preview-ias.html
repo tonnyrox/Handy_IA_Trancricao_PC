@@ -4,6 +4,43 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Handy — Aba IAs (Escopo Único por Provedor)</title>
+<!--
+================================================================================
+ OBSERVAÇÕES PARA TRABALHO FUTURO (registradas em MELHORIAS_TRANSCRICAO_PTBR.md,
+ seção 21) — 23/11/2026. Este preview é a REFERÊNCIA VISUAL, mas ainda diverge
+ do backend Rust em pontos críticos. NÃO alterar o Rust por causa deste arquivo
+ sem antes decidir o item P0 abaixo.
+
+ P0 (DECISÃO DE PRODUTO)
+  - A1/B7: este preview promete "Escopo Único por Provedor" (Groq faria ASR +
+    revisão com uma chave). O sistema REAL é HÍBRIDO: Riva/Parakeet (NVIDIA)
+    faz a transcrição e Groq faz SÓ a revisão. Decidir: (A) ajustar este preview
+    à realidade híbrida [recomendado] ou (B) implementar groq_asr.rs + Whisper.
+  - A2: "aplicar um desativa o outro" ainda NÃO existe no backend (só no frontend
+    parcial Nuvem↔Local).
+  - A3: não existe comando Tauri atômico "apply_ai_provider_config"; a UI real
+    dispara 6 setters separados e não valida a chave antes de aplicar.
+  - A4: o badge Ativado/Desativado real usa só `transcription_provider`, ignorando
+    o provider de revisão — com os defaults atuais ele mostra "Desativado" para a
+    nuvem embora Groq esteja em uso.
+
+ P1/P2/P3 (pendências detalhadas na seção 21.6 do MD)
+  - B1: campo "Base URL da Groq" é rejeitado pelo backend (só provider custom edita).
+  - B2: a chave Groq real fica em Configurações → Pós-processamento, fora do Sidebar.
+  - B3: "Verificar chave" / "Testar modelo" da Groq não existem no backend.
+  - B4: nvidia_transcription_model é código morto (UI expõe como funcional).
+  - B5: post_process_on_main_shortcut é campo órfã (sem setter/comando).
+  - B6: catálogo real de revisão = openai/gpt-oss-120b / 20b (não Whisper).
+  - P3: nvidia_riva.rs retry por texto, is_auth_error sem chamador, workaround "empty".
+
+ OUTRAS ABAS (escopo futuro — ainda sem implementação detalhada no preview)
+  - Geral: idioma da interface, atalhos (Caps Lock padrão), áudio/feedback,
+    inicialização/autostart. Revisar quando mexer nesta aba.
+  - Histórico: lista de transcrições, reprocessamento (post_process_requested),
+    retenção. Atenção: retry só aplica LLM se o campo estiver true.
+  - Sobre: versão, créditos, licença, links do fork/upstream.
+================================================================================
+-->
 <style>
   /* ==========================================================================
      1. DESIGN TOKENS (Paleta escura fiel extraída de src/styles/theme.css)
@@ -907,11 +944,15 @@
 
     <div class="nav-label">Configurações</div>
     <nav class="nav-group" aria-label="Navegação principal">
+      <!-- OBS ABAS (escopo futuro): Geral = idioma, atalhos (Caps Lock padrão),
+           áudio/feedback, autostart. Ainda sem detalhamento neste preview. -->
       <div class="nav-item" onclick="selectNav(this, 'Geral')">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         <span>Geral</span>
       </div>
 
+      <!-- OBS ABAS (escopo futuro): Histórico = transcrições salvas, reprocessamento
+           (retry só aplica LLM se post_process_requested=true), retenção. -->
       <div class="nav-item" onclick="selectNav(this, 'Histórico')">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         <span>Histórico</span>
@@ -922,6 +963,8 @@
         <span>IAs</span>
       </div>
 
+      <!-- OBS ABAS (escopo futuro): Sobre = versão, créditos, licença, links
+           fork/upstream. Ainda sem detalhamento neste preview. -->
       <div class="nav-item" onclick="selectNav(this, 'Sobre')">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
         <span>Sobre</span>
@@ -978,6 +1021,8 @@
             <span class="step-scope-tag">Provedor exclusivo ativo</span>
           </div>
 
+          <!-- OBS A1/B6: no backend, "Groq" NÃO é provedor de transcrição.
+               Catálogo real de revisão = openai/gpt-oss-120b / 20b (não Whisper). -->
           <label for="provider">Selecione o provedor</label>
           <select id="provider" onchange="onProviderChange()">
             <option value="groq" selected>Groq</option>
@@ -998,6 +1043,9 @@
             <span class="step-scope-tag" id="keyScopeTag">Groq API</span>
           </div>
 
+          <!-- OBS B2/B3: a chave Groq real vive em Configurações → Pós-processamento,
+               fora do Sidebar. Não existe ainda "Verificar chave"/"Testar modelo"
+               da Groq no backend (só test_nvidia_transcription, NVIDIA ASR). -->
           <label for="apiKeyInput">Chave API Key</label>
           <div class="key-row">
             <input id="apiKeyInput" class="input" type="password" value="••••••••••••••••••••••••" placeholder="gsk_..." oninput="onKeyInput()" />
@@ -1023,6 +1071,8 @@
             <span class="step-scope-tag" id="modelScopeTag">Modelos Groq</span>
           </div>
 
+          <!-- OBS B4/B6: nvidia_transcription_model é código morto no backend;
+               o dropdown real de revisão usa gpt-oss-120b/20b. -->
           <label for="providerModel">Modelo</label>
           <select id="providerModel" onchange="onModelChange()">
             <!-- Preenchido dinamicamente pelo JS conforme o provedor -->
@@ -1049,9 +1099,14 @@
               <button class="btn" type="button" onclick="verifyApiKey()">Verificar chave</button>
               <button class="btn" type="button" onclick="testSelectedModel()">Testar modelo</button>
             </div>
+            <!-- OBS A3: backend NÃO tem comando atômico apply_ai_provider_config.
+                 A UI real dispara 6 setters separados (não transacionais) e não
+                 valida a chave antes de aplicar. -->
             <button class="btn primary" type="button" onclick="applyProviderConfig()">Aplicar</button>
           </div>
 
+          <!-- OBS A4/B3: o badge real usa só transcription_provider e ignora o
+               provider de revisão; estes status são simulação (não existem no backend). -->
           <!-- Painel Consolidado de Status -->
           <div id="statusPanel" class="status-panel" aria-live="polite">
             <div id="statusKeyLine" class="status-line">
