@@ -1277,7 +1277,7 @@
     const cfg = PROVIDERS_CONFIG[providerKey];
 
     // Cabeçalho do card e badges de escopo único
-    document.getElementById('cloudCardTitle').textContent = cfg.cardTitle;
+    document.getElementById('cloudCardTitle').firstChild.textContent = `${cfg.cardTitle} `;
     document.getElementById('providerBadge').textContent = cfg.badge;
     document.getElementById('providerHint').textContent = cfg.providerHint;
 
@@ -1310,22 +1310,33 @@
   }
 
   /**
-   * Escopo único: verde = ativo, vermelho = desativado.
-   * Atualiza os indicadores das duas guias e os badges dos títulos.
+   * Badge AO LADO DO NOME DO PROVEDOR no título:
+   *   Ativado  (verde)  = a API desse provedor está SENDO USADA no sistema.
+   *   Desativado (vermelho) = a API NÃO está em uso (outro provedor ativo ou modo local).
    */
   function updateModeIndicators() {
     const cloudAtivo = state.activeMode === 'cloud';
 
-    // Badges dos títulos: Ativado (verde) / Desativado (vermelho)
+    // Nuvem: o badge representa o provedor configurado no título (Groq/NVIDIA).
+    // Só fica "Ativado" se a nuvem estiver ativa E o provedor do título for o aplicado.
     const cloudBadge = document.getElementById('cloudStateBadge');
-    const localBadge = document.getElementById('localStateBadge');
     if (cloudBadge) {
-      cloudBadge.textContent = cloudAtivo ? 'Ativado' : 'Desativado';
-      cloudBadge.className = `state-badge ${cloudAtivo ? 'active' : 'inactive'}`;
+      const titulo = document.getElementById('cloudCardTitle');
+      const cfg = PROVIDERS_CONFIG[state.activeProvider];
+      if (titulo) {
+        titulo.firstChild.textContent = `Configuração de Nuvem — ${cfg.name} `;
+      }
+      const apiEmUso = cloudAtivo && state.activeProvider === state.provider;
+      cloudBadge.textContent = apiEmUso ? 'Ativado' : 'Desativado';
+      cloudBadge.className = `state-badge ${apiEmUso ? 'active' : 'inactive'}`;
     }
+
+    // Local: ativado somente se o modo local estiver em uso.
+    const localBadge = document.getElementById('localStateBadge');
     if (localBadge) {
-      localBadge.textContent = cloudAtivo ? 'Desativado' : 'Ativado';
-      localBadge.className = `state-badge ${cloudAtivo ? 'inactive' : 'active'}`;
+      const localAtivo = !cloudAtivo;
+      localBadge.textContent = localAtivo ? 'Ativado' : 'Desativado';
+      localBadge.className = `state-badge ${localAtivo ? 'active' : 'inactive'}`;
     }
   }
 
