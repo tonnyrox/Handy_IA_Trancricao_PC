@@ -969,3 +969,73 @@ Aplicado em `src/components/settings/models/ModelsSettings.tsx`:
 - [ ] Testes + build Tauri + reinstalação
 - [ ] Remover chave Groq e campo morto
 - [ ] Publicar sem chaves
+
+---
+
+# 16. PLANO DE LAYOUT: ABA "IAs" COM GUIAS NUVEM / LOCAL
+
+> Análise profunda feita em 24/11/2026 antes de qualquer mudança. Status: **em execução**.
+
+## 16.1 O que o usuário pediu
+
+1. A aba **Modelos** passa a se chamar **IAs**.
+2. Dentro dela, duas guias: **Nuvem** (primeira) e **Local**.
+3. Na **Nuvem**: um **Dropdown de provedor** (NVIDIA, Groq). Ao escolher Groq, aparece o fluxo de chave/config igual ao padrão anterior. **Abaixo do provedor, os modelos** daquele provedor.
+4. No **Local**: **sem provedores** — os modelos locais aparecem direto.
+5. Organizar o layout e registrar o planejamento para não haver problema.
+
+## 16.2 Análise do estado atual (mapeada)
+
+| Item | Achado |
+|---|---|
+| Rótulo da aba | `Sidebar.tsx:48` → `labelKey: "sidebar.models"`; valor em 27 `translation.json` linha 17 |
+| Título da página | `ModelsSettings.tsx:398` → `settings.models.title` |
+| ID da seção | `Sidebar.tsx:47`, `App.tsx:21/22/107` — **manter `models`** (renomear só o rótulo evita 4 pontos de quebra) |
+| Navegação | `App.tsx:35` — estado local `currentSection`, sem router |
+| Abas reutilizáveis | **Não existem** — criar segmented control local, sem lib nova |
+| Provedores na Nuvem hoje | `ModelsSettings.tsx:82-101` — lista `cloudAiProviders` hardcoded (NVIDIA/Groq) |
+| UI real de revisão | `post-processing/PostProcessingSettings.tsx` + `ProviderSelect`/`ModelSelect` (`PostProcessingSettingsApi/`) |
+| Setters | `setPostProcessProvider` (`settingsStore.ts:477`), `updatePostProcessModel` (`:636`), `fetchPostProcessModels` (`:640`) |
+| i18n | 27 idiomas; `check:translations` exige **todas as chaves em todos** — **já falha** com 27 chaves faltantes pré-existentes (fork adicionou só em en/pt) |
+| CI | `code-quality.yml` roda `check:translations`, lint, format — hoje já vermelho por causa dessas chaves |
+| Mensagem Rust desatualizada | `actions.rs:607` diz "Open Settings > Models" — atualizar para IAs |
+
+## 16.3 Decisões de implementação (menor risco)
+
+1. **Renomear só o valor** de `sidebar.models` e `settings.models.title` em pt/en (manter ID `models` e chaves `settings.models.*`).
+2. **Estado local** `const [tab, setTab] = useState<"cloud"|"local">(...)` em `ModelsSettings` — sem store global, sem router.
+3. **Segmented control** Nuvem/Local abaixo do `h1`, com `bg-wash rounded-lg p-1` e botão ativo destacado.
+4. **Guia Nuvem:** `Dropdown` de provedor (NVIDIA/Groq) → ao trocar, chama `setPostProcessProvider`; **modelos abaixo** como chips; depois a config NVIDIA (credencial/modelo/ações/resultado).
+5. **Guia Local:** `RetiredModelsNotice` + `ModelTable` com seções locais — sem provedores.
+6. `settings.models.tabs.cloud/local` com `defaultValue` (não adiciona chaves — `check:translations` continua com as 27 pendências pré-existentes).
+7. Validar com `bun run lint` + `bun run build`. **Não fazer build Tauri** nesta etapa (só interface).
+
+## 16.4 Riscos evitados
+
+- ❌ Renomear ID `models` (4 pontos no código)
+- ❌ Renomear chaves `settings.models.*` (27 JSON)
+- ❌ Mexer em `modelEntries.ts` / `pickModel` / `ModelRow` (lógica de provider local já funciona)
+- ❌ Adicionar literals JSX sem `t()` (lint falha)
+- ❌ Esperar `check:translations` verde sem corrigir as 27 chaves pré-existentes
+
+## 16.5 Critérios de aceite
+
+1. Sidebar mostra **IAs** (pt) / **AIs** (en).
+2. Ao abrir, guia **Nuvem** aparece primeiro.
+3. Na Nuvem: Dropdown com NVIDIA e Groq; ao trocar, provedor de revisão muda.
+4. Abaixo do Dropdown: modelos do provedor selecionado.
+5. Na guia **Local**: só modelos locais, nenhum provedor.
+6. `bun run lint` e `bun run build` passam.
+
+## 16.6 Checklist
+
+- [x] Análise completa (subagent + mapeamento)
+- [x] Registro do plano (esta seção)
+- [x] Renomear rótulo para **IAs** (pt) / **AIs** (en) em `sidebar.models` e `settings.models.title`; mensagem Rust `actions.rs:607` atualizada
+- [x] Guias **Nuvem** (padrão) e **Local** com segmented control (`role="tablist"`)
+- [x] Dropdown de provedor (NVIDIA/Groq) + modelos logo abaixo na guia Nuvem
+- [x] Guia Local sem provedores — só `ModelTable` + `RetiredModelsNotice`
+- [x] `bun run lint` (exit 0) + `bun run build` (exit 0)
+- [x] Publicar sem chaves
+
+**Nota:** build Tauri/reinstalação **não** foram feitos nesta etapa (somente interface). `check:translations` segue com as 27 chaves pré-existentes faltantes — não bloqueante para este fork.

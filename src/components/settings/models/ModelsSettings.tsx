@@ -103,6 +103,13 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
   const activeAiProvider = settings?.post_process_provider_id ?? "groq";
   const activeAiModel = settings?.post_process_models?.[activeAiProvider] ?? "";
 
+  // Guia local da página de IAs: Nuvem primeiro, Local depois.
+  const [tab, setTab] = useState<"cloud" | "local">(
+    (settings?.transcription_provider as string | undefined) === "nvidia"
+      ? "cloud"
+      : "local",
+  );
+
   const transcriptionProvider =
     (settings?.transcription_provider as string | undefined) ?? "local";
   const nvidiaApiKey = settings?.transcription_api_keys?.nvidia ?? "";
@@ -407,6 +414,31 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
         )}
       </div>
 
+      {/* Guias da página de IAs: Nuvem (padrão) e Local. */}
+      <div className="mx-[12px] mb-[16px] flex flex-none" role="tablist">
+        <div className="inline-flex rounded-lg bg-wash p-1">
+          {(["cloud", "local"] as const).map((value) => (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              aria-selected={tab === value}
+              onClick={() => setTab(value)}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-logo-primary ${
+                tab === value
+                  ? "bg-background text-text shadow-sm"
+                  : "text-mid-gray hover:text-text"
+              }`}
+            >
+              {t(`settings.models.tabs.${value}`, {
+                defaultValue: value === "cloud" ? "Nuvem" : "Local",
+              })}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {tab === "cloud" && (
       <div className="mb-[16px] flex-none space-y-3 px-[12px]">
         <SettingsGroup
           title={t("settings.models.transcriptionEngine.groupTitle")}
@@ -449,48 +481,38 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
               })}
             </p>
             <div className="space-y-2">
-              {cloudAiProviders.map((provider) => (
-                <div
-                  key={provider.id}
-                  className={`rounded-lg border p-3 transition-colors ${
-                    activeAiProvider === provider.id
-                      ? "border-logo-primary bg-logo-primary/10"
-                      : "border-line bg-background-ui/20"
-                  }`}
-                >
-                  <button
-                    type="button"
-                    onClick={() => void setPostProcessProvider(provider.id)}
-                    disabled={isUpdating("post_process_provider_id")}
-                    className="flex w-full items-start gap-2 text-start cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-logo-primary"
-                  >
-                    <Cloud size={15} className="mt-0.5 shrink-0 text-logo-primary" aria-hidden="true" />
-                    <span className="flex flex-col gap-0.5">
-                      <span className="text-sm font-semibold text-text">{provider.label}</span>
-                      <span className="text-xs text-mid-gray">{provider.hint}</span>
-                    </span>
-                  </button>
-                  {activeAiProvider === provider.id && (
-                    <div className="mt-2 flex flex-wrap gap-2 border-t border-line pt-2">
-                      {provider.models.map((model) => (
-                        <button
-                          key={model.id}
-                          type="button"
-                          onClick={() => void updatePostProcessModel(provider.id, model.id)}
-                          disabled={isUpdating("post_process_model")}
-                          className={`rounded-md border px-2 py-1 text-xs cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-logo-primary ${
-                            activeAiModel === model.id
-                              ? "border-logo-primary bg-logo-primary/15 text-text"
-                              : "border-line text-mid-gray hover:text-text"
-                          }`}
-                        >
-                          {model.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
+              {/* Provedor primeiro (Dropdown), modelos logo abaixo. */}
+              <Dropdown
+                options={cloudAiProviders.map((provider) => ({
+                  value: provider.id,
+                  label: provider.label,
+                }))}
+                selectedValue={activeAiProvider}
+                onSelect={(value) => void setPostProcessProvider(value)}
+                disabled={isUpdating("post_process_provider_id")}
+              />
+              <p className="text-xs text-mid-gray">
+                {cloudAiProviders.find((p) => p.id === activeAiProvider)?.hint}
+              </p>
+              <div className="flex flex-wrap gap-2 border-t border-line pt-2">
+                {cloudAiProviders
+                  .find((p) => p.id === activeAiProvider)
+                  ?.models.map((model) => (
+                    <button
+                      key={model.id}
+                      type="button"
+                      onClick={() => void updatePostProcessModel(activeAiProvider, model.id)}
+                      disabled={isUpdating("post_process_model")}
+                      className={`rounded-md border px-2 py-1 text-xs cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-logo-primary ${
+                        activeAiModel === model.id
+                          ? "border-logo-primary bg-logo-primary/15 text-text"
+                          : "border-line text-mid-gray hover:text-text"
+                      }`}
+                    >
+                      {model.label}
+                    </button>
+                  ))}
+              </div>
             </div>
             <p className="mt-2 text-xs text-mid-gray">
               {t("settings.models.transcriptionEngine.nvidia.aiProviders.note", {
@@ -808,7 +830,10 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
           )}
         </SettingsGroup>
       </div>
+      )}
 
+      {tab === "local" && (
+      <>
       <div className="mx-[12px] mb-[16px] flex-none empty:hidden">
         <RetiredModelsNotice />
       </div>
@@ -834,6 +859,8 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
         }
         thinEdge
       />
+      </>
+      )}
     </div>
   );
 };

@@ -604,7 +604,7 @@ impl ShortcutAction for TranscribeAction {
             notices::raise(
                 app,
                 Notice::new(NoticeCode::TranscriptionFailed, NoticeSource::Dictation).with_detail(
-                    "NVIDIA transcription is selected but no API key is configured. Open Settings > Models, select NVIDIA, and add your API key."
+                    "NVIDIA transcription is selected but no API key is configured. Open Settings > AIs, select NVIDIA, and add your API key."
                         .to_string(),
                 ),
             );

@@ -14,7 +14,7 @@
   },
   "sidebar": {
     "general": "Geral",
-    "models": "Modelos",
+    "models": "IAs",
     "advanced": "Avançado",
     "postProcessing": "Pós-Processamento",
     "history": "Histórico",
@@ -393,7 +393,7 @@
       }
     },
     "models": {
-      "title": "Modelos",
+      "title": "IAs",
       "changeLanguages": "Alterar idiomas",
       "sections": {
         "yours": "Neste computador",

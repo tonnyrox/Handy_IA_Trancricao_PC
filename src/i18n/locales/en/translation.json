@@ -14,7 +14,7 @@
   },
   "sidebar": {
     "general": "General",
-    "models": "Models",
+    "models": "AIs",
     "advanced": "Advanced",
     "postProcessing": "Post Process",
     "history": "History",
@@ -393,7 +393,7 @@
       }
     },
     "models": {
-      "title": "Models",
+      "title": "AIs",
       "changeLanguages": "Change languages",
       "sections": {
         "yours": "On this computer",
