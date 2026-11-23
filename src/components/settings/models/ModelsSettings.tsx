@@ -73,7 +73,35 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
     checkNvidiaModelsWithAudio,
     testNvidiaTranscription,
     nvidiaTranscriptionModelOptions,
+    setPostProcessProvider,
+    updatePostProcessModel,
   } = useSettings();
+
+  // Provedores de IA disponíveis na nuvem para a revisão gramatical.
+  // Cada provedor mostra seus próprios modelos (mesmo padrão da aba Local).
+  const cloudAiProviders = [
+    {
+      id: "nvidia",
+      label: "NVIDIA",
+      hint: "Nemotron — usa a mesma chave da transcrição",
+      models: [
+        { id: "nvidia/nemotron-3.5-lightning-30b-a3b", label: "Nemotron 3.5 Lightning 30B" },
+        { id: "nvidia/nemotron-3.5-bolt-e4b", label: "Nemotron 3.5 Bolt E4B" },
+      ],
+    },
+    {
+      id: "groq",
+      label: "Groq",
+      hint: "GPT-OSS — revisão rápida",
+      models: [
+        { id: "openai/gpt-oss-120b", label: "GPT-OSS 120B" },
+        { id: "openai/gpt-oss-20b", label: "GPT-OSS 20B" },
+      ],
+    },
+  ] as const;
+
+  const activeAiProvider = settings?.post_process_provider_id ?? "groq";
+  const activeAiModel = settings?.post_process_models?.[activeAiProvider] ?? "";
 
   const transcriptionProvider =
     (settings?.transcription_provider as string | undefined) ?? "local";
@@ -113,7 +141,6 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
     if (transcriptionProvider === "nvidia") {
       void fetchNvidiaTranscriptionModels(nvidiaApiKeyDraft || nvidiaApiKey);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transcriptionProvider, nvidiaApiKey]);
 
   useEffect(() => {
@@ -414,6 +441,65 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
             </div>
           </div>
 
+          {/* Nuvem: primeiro os provedores de IA, depois os modelos de cada um. */}
+          <div className="pt-2">
+            <p className="mb-2 text-xs font-medium text-text">
+              {t("settings.models.transcriptionEngine.nvidia.aiProviders.title", {
+                defaultValue: "Provedores de IA na nuvem (revisão gramatical)",
+              })}
+            </p>
+            <div className="space-y-2">
+              {cloudAiProviders.map((provider) => (
+                <div
+                  key={provider.id}
+                  className={`rounded-lg border p-3 transition-colors ${
+                    activeAiProvider === provider.id
+                      ? "border-logo-primary bg-logo-primary/10"
+                      : "border-line bg-background-ui/20"
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => void setPostProcessProvider(provider.id)}
+                    disabled={isUpdating("post_process_provider_id")}
+                    className="flex w-full items-start gap-2 text-start cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-logo-primary"
+                  >
+                    <Cloud size={15} className="mt-0.5 shrink-0 text-logo-primary" aria-hidden="true" />
+                    <span className="flex flex-col gap-0.5">
+                      <span className="text-sm font-semibold text-text">{provider.label}</span>
+                      <span className="text-xs text-mid-gray">{provider.hint}</span>
+                    </span>
+                  </button>
+                  {activeAiProvider === provider.id && (
+                    <div className="mt-2 flex flex-wrap gap-2 border-t border-line pt-2">
+                      {provider.models.map((model) => (
+                        <button
+                          key={model.id}
+                          type="button"
+                          onClick={() => void updatePostProcessModel(provider.id, model.id)}
+                          disabled={isUpdating("post_process_model")}
+                          className={`rounded-md border px-2 py-1 text-xs cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-logo-primary ${
+                            activeAiModel === model.id
+                              ? "border-logo-primary bg-logo-primary/15 text-text"
+                              : "border-line text-mid-gray hover:text-text"
+                          }`}
+                        >
+                          {model.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-mid-gray">
+              {t("settings.models.transcriptionEngine.nvidia.aiProviders.note", {
+                defaultValue:
+                  "A transcrição usa NVIDIA Riva; a revisão gramatical usa o provedor e o modelo escolhidos acima.",
+              })}
+            </p>
+          </div>
+
           {transcriptionProvider === "nvidia" && (
             <>
               <SettingContainer
@@ -425,7 +511,14 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
                 grouped
                 layout="stacked"
               >
-                <div className="space-y-3 pt-1">
+                <div className="space-y-4 pt-1">
+                  {/* Layout em etapas: credencial → modelo → ações → resultado. */}
+                  <section className="space-y-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-mid-gray">
+                      {t("settings.models.transcriptionEngine.nvidia.stepCredential", {
+                        defaultValue: "1 · Credencial NVIDIA",
+                      })}
+                    </p>
                   <div className="flex flex-col gap-1">
                     <label className="text-xs font-medium text-text">
                       {t(
@@ -535,7 +628,14 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
                       </div>
                     </details>
                   </div>
+                  </section>
 
+                  <section className="space-y-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-mid-gray">
+                      {t("settings.models.transcriptionEngine.nvidia.stepModel", {
+                        defaultValue: "2 · Modelo de transcrição",
+                      })}
+                    </p>
                   <div className="flex flex-col gap-1">
                     <label className="text-xs font-medium text-text">
                       {t(
@@ -555,6 +655,11 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
                         }
                         className="min-w-[260px] flex-1"
                       />
+                      <p className="pt-1 text-[11px] font-medium text-mid-gray">
+                        {t("settings.models.transcriptionEngine.nvidia.stepActions", {
+                          defaultValue: "Ações",
+                        })}
+                      </p>
                       <div className="flex flex-wrap gap-2">
                         <Button
                           variant="secondary"
@@ -641,7 +746,12 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
                             ? "border-error/40 bg-error/10 text-text"
                             : "border-line bg-background-ui/10 text-mid-gray"
                       }`}>
-                        <span className="font-medium">Verificar configuração: </span>{testMessage}
+                        <span className="font-medium">
+                          {t("settings.models.transcriptionEngine.nvidia.test.statusLabel", {
+                            defaultValue: "Verificar configuração:",
+                          })}
+                        </span>{" "}
+                        {testMessage}
                       </div>
                     )}
                     {/* Status de "Verificar modelos" — próprio do botão de modelos */}
@@ -653,7 +763,12 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
                             ? "border-error/40 bg-error/10 text-text"
                             : "border-line bg-background-ui/10 text-mid-gray"
                       }`}>
-                        <span className="font-medium">Verificar modelos: </span>{checkMessage}
+                        <span className="font-medium">
+                          {t("settings.models.transcriptionEngine.nvidia.check.statusLabel", {
+                            defaultValue: "Verificar modelos:",
+                          })}
+                        </span>{" "}
+                        {checkMessage}
                       </div>
                     )}
                     {/* Status de "Aplicar" */}
@@ -665,7 +780,12 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
                             ? "border-error/40 bg-error/10 text-text"
                             : "border-line bg-background-ui/10 text-mid-gray"
                       }`}>
-                        <span className="font-medium">Aplicar: </span>{applyMessage}
+                        <span className="font-medium">
+                          {t("settings.models.transcriptionEngine.nvidia.apply.statusLabel", {
+                            defaultValue: "Aplicar:",
+                          })}
+                        </span>{" "}
+                        {applyMessage}
                       </div>
                     )}
                     {!nvidiaApiKeyDraft.trim() && (
@@ -680,6 +800,7 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
                       </p>
                     )}
                   </div>
+                  </section>
 
                 </div>
               </SettingContainer>

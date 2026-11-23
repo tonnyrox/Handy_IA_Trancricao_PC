@@ -945,11 +945,27 @@ O arquivo `src/components/settings/models/ModelsSettings.tsx` **já separa nuvem
 
 ## 15.7 Checklist (nada executado ainda)
 
-- [ ] Decidir Opção A (recomendada) ou C
+### 15.8 Execução parcial em 24/11 (layout da aba Nuvem)
+
+**Decisão do usuário:** primeiro apenas **organizar o layout**, mantendo os dois provedores visíveis (NVIDIA e Groq) e seus modelos — sem trocar o provedor padrão ainda.
+
+Aplicado em `src/components/settings/models/ModelsSettings.tsx`:
+- ✅ Seção **"Provedores de IA na nuvem (revisão gramatical)"** com cards para **NVIDIA** e **Groq** (clicar seleciona o provider de revisão via `setPostProcessProvider`).
+- ✅ Dentro do provedor ativo, **lista de modelos selecionáveis** (NVIDIA: Nemotron Lightning/Bolt; Groq: GPT-OSS 120B/20B) via `updatePostProcessModel` — hierarquia **Provedor → Modelo**, igual à aba Local.
+- ✅ Configuração NVIDIA reorganizada em etapas: **1 · Credencial** → **2 · Modelo** (com sub-bloco "Ações") → **3 · Resultado** (status agrupados).
+- ✅ Nota explicativa: transcrição usa Riva; revisão usa o provedor/modelo escolhido.
+- ✅ Corrigidos 3 strings literais pré-existentes nos status (`i18next/no-literal-string`) e um `eslint-disable` de regra inexistente.
+- ✅ `bun run build` (exit 0) e `bun run lint` (exit 0).
+
+**Não executado ainda (próxima etapa):** mudar o provider padrão para NVIDIA (Opção A), golden test com Nemotron, build Tauri + reinstalação, remoção da chave Groq e do campo morto. `check:translations` já falhava antes (1/26 idiomas) com chaves `defaultValue` — **pré-existente, não bloqueante**.
+
+### 15.9 Checklist atualizado
+
+- [x] Organizar layout da aba Nuvem (provedores → modelos)
+- [x] lint + build do frontend
+- [ ] Decidir Opção A (unificar em NVIDIA) ou manter C
 - [ ] golden test com Nemotron (meta 10/10)
 - [ ] Ajustar defaults e config local
-- [ ] Testes + build + reinstalação
-- [ ] UI: separar Transcrição / Revisão e dropdown do modelo de revisão
-- [ ] i18n + bindings
+- [ ] Testes + build Tauri + reinstalação
 - [ ] Remover chave Groq e campo morto
 - [ ] Publicar sem chaves
