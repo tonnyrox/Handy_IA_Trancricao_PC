@@ -82,8 +82,8 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
   const cloudAiProviders = [
     {
       id: "nvidia",
-      label: "NVIDIA",
-      hint: "Nemotron — usa a mesma chave da transcrição",
+      label: "Nuvem gratuita",
+      hint: "Transcrição rápida PT-BR gratuita",
       models: [
         { id: "nvidia/nemotron-3.5-lightning-30b-a3b", label: "Nemotron 3.5 Lightning 30B" },
         { id: "nvidia/nemotron-3.5-bolt-e4b", label: "Nemotron 3.5 Bolt E4B" },
@@ -103,12 +103,8 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
   const activeAiProvider = settings?.post_process_provider_id ?? "groq";
   const activeAiModel = settings?.post_process_models?.[activeAiProvider] ?? "";
 
-  // Guia local da página de IAs: Nuvem primeiro, Local depois.
-  const [tab, setTab] = useState<"cloud" | "local">(
-    (settings?.transcription_provider as string | undefined) === "nvidia"
-      ? "cloud"
-      : "local",
-  );
+  // Guia local da página de IAs: Nuvem sempre primeiro.
+  const [tab, setTab] = useState<"cloud" | "local">("cloud");
 
   const transcriptionProvider =
     (settings?.transcription_provider as string | undefined) ?? "local";
@@ -341,7 +337,7 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
   };
 
   const sections: TableSection[] =
-    transcriptionProvider === "nvidia"
+    tab === "cloud" && transcriptionProvider === "nvidia"
       ? lists.cloud.length
         ? [cloudSection]
         : []
@@ -441,43 +437,18 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
       {tab === "cloud" && (
       <div className="mb-[16px] flex-none space-y-3 px-[12px]">
         <SettingsGroup
-          title={t("settings.models.transcriptionEngine.groupTitle")}
-          description={t("settings.models.transcriptionEngine.groupDescription")}
+          title={t("settings.models.transcriptionEngine.nvidia.cloudTitle", {
+            defaultValue: "Nuvem gratuita",
+          })}
+          description={t("settings.models.transcriptionEngine.nvidia.cloudDescription", {
+            defaultValue: "Transcrição rápida PT-BR gratuita",
+          })}
         >
-          <div className="flex flex-col gap-2">
-            <p className="text-xs font-medium text-text">
-              {t("settings.models.transcriptionEngine.provider.title")}
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {([
-                { value: "nvidia", Icon: Cloud, label: t("settings.models.transcriptionEngine.provider.options.nvidia"), hint: t("settings.models.transcriptionEngine.provider.cloudHint", { defaultValue: "NVIDIA Cloud — transcrição rápida em PT-BR" }) },
-                { value: "local", Icon: Monitor, label: t("settings.models.transcriptionEngine.provider.options.local"), hint: t("settings.models.transcriptionEngine.provider.localHint", { defaultValue: "Transcrição no dispositivo, sem internet" }) },
-              ] as const).map(({ Icon, ...opt }) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => void updateTranscriptionProvider(opt.value)}
-                  disabled={isUpdating("transcription_provider")}
-                  className={`flex flex-col items-start gap-0.5 rounded-lg border p-3 text-start transition-colors cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-logo-primary ${
-                    transcriptionProvider === opt.value
-                      ? "border-logo-primary bg-logo-primary/10"
-                      : "border-line bg-background-ui/20 hover:bg-wash"
-                  }`}
-                >
-                  <span className="flex items-center gap-2 text-sm font-semibold text-text">
-                    <Icon size={15} aria-hidden="true" className="text-logo-primary" /> {opt.label}
-                  </span>
-                  <span className="text-xs text-mid-gray">{opt.hint}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Nuvem: primeiro os provedores de IA, depois os modelos de cada um. */}
           <div className="pt-2">
             <p className="mb-2 text-xs font-medium text-text">
               {t("settings.models.transcriptionEngine.nvidia.aiProviders.title", {
-                defaultValue: "Provedores de IA na nuvem (revisão gramatical)",
+                defaultValue: "Provedor e modelo",
               })}
             </p>
             <div className="space-y-2">
@@ -494,24 +465,20 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
               <p className="text-xs text-mid-gray">
                 {cloudAiProviders.find((p) => p.id === activeAiProvider)?.hint}
               </p>
-              <div className="flex flex-wrap gap-2 border-t border-line pt-2">
-                {cloudAiProviders
-                  .find((p) => p.id === activeAiProvider)
-                  ?.models.map((model) => (
-                    <button
-                      key={model.id}
-                      type="button"
-                      onClick={() => void updatePostProcessModel(activeAiProvider, model.id)}
-                      disabled={isUpdating(`post_process_model:${activeAiProvider}`)}
-                      className={`rounded-md border px-2 py-1 text-xs cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-logo-primary ${
-                        activeAiModel === model.id
-                          ? "border-logo-primary bg-logo-primary/15 text-text"
-                          : "border-line text-mid-gray hover:text-text"
-                      }`}
-                    >
-                      {model.label}
-                    </button>
-                  ))}
+              <div className="border-t border-line pt-2">
+                <p className="mb-1 text-xs font-medium text-text">
+                  {t("settings.models.transcriptionEngine.nvidia.aiProviders.modelLabel", {
+                    defaultValue: "Modelo",
+                  })}
+                </p>
+                <Dropdown
+                  options={(cloudAiProviders.find((p) => p.id === activeAiProvider)?.models ?? []).map(
+                    (model) => ({ value: model.id, label: model.label }),
+                  )}
+                  selectedValue={activeAiModel}
+                  onSelect={(value) => void updatePostProcessModel(activeAiProvider, value)}
+                  disabled={isUpdating(`post_process_model:${activeAiProvider}`)}
+                />
               </div>
             </div>
             <p className="mt-2 text-xs text-mid-gray">

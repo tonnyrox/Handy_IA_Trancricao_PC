@@ -1104,4 +1104,32 @@ Aplicado em `src/components/settings/models/ModelsSettings.tsx`:
 
 **Nota final:** durante a validação, a regra de "string vazia" do prompt estava agressiva e apagava frases com conteúdo (8/10). Foi restringida a ruído exclusivo — **10/10 restaurado**. O prompt local e o `tools/golden_test.py` foram sincronizados.
 
+---
+
+# 18. REORGANIZAÇÃO FINAL DA ABA IAs + PRÉVIA VISUAL
+
+## 18.1 O que foi pedido
+- Remover a palavra **NVIDIA** do rótulo na nuvem → ficar só **"Nuvem gratuita"** com descrição **"Transcrição rápida PT-BR gratuita"**.
+- Manter o provedor **Groq** e, abaixo dele, um **Dropdown de modelos** (escolher provedor → escolher modelo).
+- Remover a palavra **"Motor"** — manter só **Nuvem** e **Local** como guias.
+- Remover o seletor superior NVIDIA/Local (agora redundante).
+- Garantir que os **modelos locais** apareçam na guia **Local**.
+- Criar um **arquivo HTML de prévia visual** (cópia exata da tela, em JS puro) para o usuário apontar ajustes. A estrutura de módulos continua em Rust.
+
+## 18.2 Aplicado em `ModelsSettings.tsx`
+- ❌ Removido o seletor "motor" (cards NVIDIA Cloud / Local) e o título "Motor de transcrição".
+- ✅ Título da área: **Nuvem gratuita** / descrição: **Transcrição rápida PT-BR gratuita**.
+- ✅ Dropdown de provedor com rótulos **Nuvem gratuita** (NVIDIA) e **Groq**.
+- ✅ Abaixo do provedor: **Dropdown de modelos** (Nemotron Lightning/Bolt ou GPT-OSS 120B/20B).
+- ✅ Guia padrão: **Nuvem** sempre primeiro (critério 16.5.2 atendido).
+- ✅ Guia **Local**: seções locais forçadas (`tab === "local"`), mesmo com provider NVIDIA.
+- ✅ `bun run lint` e `bun run build`: exit 0.
+
+## 18.3 Arquivo de prévia
+`preview-ias.html` — réplica visual interativa da aba IAs (sidebar, guias, Dropdowns, credencial e tabela de modelos). Abrir no navegador; clicar nas guias e trocar o provedor atualiza os modelos. Serve para apontar onde ajustar sem mexer no Rust.
+
+## 18.4 Estado
+- Somente interface alterada — **não houve build Tauri nesta etapa**.
+- Config/chaves intactas (`settings_store.json` fora do repo).
+
 **Pergunta ao usuário:** corrigir P0/P1 antes do build, ou buildar agora com os bugs conhecidos?
