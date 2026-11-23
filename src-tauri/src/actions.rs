@@ -1265,7 +1265,11 @@ mod tests {
         let provider_id = provider.id.clone();
         settings
             .post_process_models
-            .insert(provider_id, "model".to_string());
+            .insert(provider_id.clone(), "model".to_string());
+        // O gate de P0.1 exige chave configurada — fixtures precisam ter uma.
+        settings
+            .post_process_api_keys
+            .insert(provider_id, "test-key".to_string());
         settings.post_process_selected_prompt_id =
             settings.post_process_prompts.first().map(|p| p.id.clone());
         settings
