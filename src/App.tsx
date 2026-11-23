@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import "./App.css";
 import SecureInputWarning from "./components/SecureInputWarning";
 import Footer from "./components/footer";
-import { DebugSettings, ModelsSettings } from "./components/settings";
+import { ModelsSettings } from "./components/settings";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { FileDropOverlay } from "./components/FileDropOverlay";
 import { Sidebar, SidebarSection, SECTIONS_CONFIG } from "./components/Sidebar";
@@ -19,10 +19,7 @@ const renderSettingsContent = (
   onSectionChange: (section: SidebarSection) => void,
 ) => {
   if (section === "models") {
-    return <ModelsSettings onChangeLanguages={() => onSectionChange("general")} />;
-  }
-  if (section === "debug") {
-    return <DebugSettings />;
+    return <ModelsSettings />;
   }
 
   const ActiveComponent =

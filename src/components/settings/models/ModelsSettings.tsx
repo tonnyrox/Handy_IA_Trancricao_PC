@@ -48,15 +48,8 @@ const Rescan: React.FC = () => {
   );
 };
 
-interface ModelsSettingsProps {
-  /** Where the languages are changed (General). */
-  onChangeLanguages?: () => void;
-}
-
-/** The Models page: onboarding's model table, filling the window. */
-export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
-  onChangeLanguages,
-}) => {
+/** The IAs page: provedores em nuvem e modelos locais. */
+export const ModelsSettings: React.FC = () => {
   const { t } = useTranslation();
   const loading = useModelStore((s) => s.loading);
   const { facts, lists } = useModelEntries();
@@ -108,6 +101,11 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
 
   const transcriptionProvider =
     (settings?.transcription_provider as string | undefined) ?? "local";
+
+  // Badge do título: verde só quando a API do provedor em uso está ativa.
+  const nuvemApiEmUso = transcriptionProvider === "nvidia";
+  const badgeNuvem = nuvemApiEmUso ? "Ativado" : "Desativado";
+  const badgeLocal = nuvemApiEmUso ? "Desativado" : "Ativado";
   const nvidiaApiKey = settings?.transcription_api_keys?.nvidia ?? "";
   const nvidiaModel =
     settings?.nvidia_transcription_model ?? "nvidia/parakeet-1_1b-rnnt-multilingual-asr";
@@ -397,22 +395,13 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
     <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col">
       {/* The title, and across from it where to change the languages the
           grades are for. */}
-      <div className="mb-[16px] flex flex-none items-center justify-between gap-[12px] px-[12px]">
+      <div className="mb-[16px] flex flex-none items-center gap-[12px] px-[12px]">
         <h1 className="text-xl font-semibold">{t("settings.models.title")}</h1>
-        {onChangeLanguages && (
-          <button
-            type="button"
-            onClick={onChangeLanguages}
-            className="shrink-0 cursor-pointer text-sm text-text underline decoration-line-strong underline-offset-[3px] hover:decoration-text focus:outline-none focus-visible:ring-1 focus-visible:ring-logo-primary"
-          >
-            {t("settings.models.changeLanguages")}
-          </button>
-        )}
       </div>
 
       {/* Guias da página de IAs: Nuvem (padrão) e Local. */}
       <div className="mx-[12px] mb-[16px] flex flex-none" role="tablist">
-        <div className="inline-flex rounded-lg bg-wash p-1">
+        <div className="grid w-full grid-cols-2 gap-1 rounded-lg bg-wash p-1">
           {(["cloud", "local"] as const).map((value) => (
             <button
               key={value}
@@ -491,6 +480,14 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
 
           {transcriptionProvider === "nvidia" && (
             <>
+              <div className="flex items-center gap-2 pb-1">
+                <span className="text-sm font-semibold text-text">
+                  {t("settings.models.transcriptionEngine.nvidia.title")}
+                </span>
+                <span className={`state-badge ${nuvemApiEmUso ? "active" : "inactive"}`}>
+                  {badgeNuvem}
+                </span>
+              </div>
               <SettingContainer
                 title={t("settings.models.transcriptionEngine.nvidia.title")}
                 description={t(
@@ -801,6 +798,14 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
 
       {tab === "local" && (
       <>
+      <div className="mx-[12px] mb-[16px] flex flex-none items-center gap-2">
+        <h2 className="text-base font-semibold">
+          {t("settings.models.title")}{" "}
+          <span className={`state-badge ${!nuvemApiEmUso ? "active" : "inactive"}`}>
+            {badgeLocal}
+          </span>
+        </h2>
+      </div>
       <div className="mx-[12px] mb-[16px] flex-none empty:hidden">
         <RetiredModelsNotice />
       </div>

@@ -1232,4 +1232,95 @@ A tela troca **todos os textos, placeholder, hint, modelos, avançado e status**
 - [ ] Remover equivalentes no Rust/React (quando ajustar a tela)
 - [ ] Reabrir HTML e conferir com a outra pessoa
 
+---
+
+# 20. ESPECIFICAÇÃO FINAL DO LAYOUT (validada no HTML) — 24/11
+
+> Tudo o que foi ajustado no `preview-ias.html` está registrado aqui. O HTML é a referência canônica (19.7). Agora vamos APPLICATION no sistema real (React/Rust).
+
+## 20.1 Estrutura visual final (ordem exata)
+
+```
+IAs
+├── Sidebar: Geral · Histórico · IAs · Sobre
+│   (removidos: Pós-processamento, Avançado, Debug)
+├── Cabeçalho: título "IAs" + subtítulo
+│   (removido: botão "Alterar idiomas" e utilitários Copiar/Baixar HTML)
+├── Guias (largura IGUAL ao card, 100%, grid 1fr 1fr): [ Nuvem ] [ Local ]
+│
+├── Guia Nuvem
+│   └── Configuração de Nuvem — <Provedor>  [Ativado 🟢 / Desativado 🔴]
+│       ├── 1 · Provedor (Dropdown: Groq / NVIDIA)
+│       ├── 2 · Chave API Key (input + 👁 + 🗑, dinâmico por provedor)
+│       └── 3 · Modelo do Provedor (Dropdown + descrição técnica)
+│           ├── Avançado (opcional) — dinâmico por provedor
+│           ├── Ações: [Verificar chave] [Testar modelo] [Aplicar]
+│           └── Painel de status consolidado (3 linhas)
+│
+└── Guia Local
+    └── Seus modelos  [Ativado 🟢 / Desativado 🔴]
+        ├── aviso de modelos aposentados
+        ├── lista clicável (dot verde = em uso)
+        ├── [Atualizar] / [Mostrar mais N modelos]
+        ├── Compatíveis com seu idioma
+        ├── Parcialmente compatíveis
+        └── nota de modelos não testados
+```
+
+## 20.2 Decisões aplicadas no HTML (todas validadas)
+
+| # | Decisão | Onde |
+|---|---|---|
+| 1 | Remover item **Avançado** da sidebar | 19.8 |
+| 2 | Remover bloco **head-actions** (Copiar HTML / Baixar .html / Alterar idiomas) | 19.8 |
+| 3 | Remover item **Debug** da sidebar | rodada 24/11 |
+| 4 | Guias Nuvem/Local com **mesma largura do card** (sem `max-width: 460px`) | rodada 24/11 |
+| 5 | Remover pílulas de provedor (`exclusivity-row`) | rodada 24/11 |
+| 6 | Badge **Ativado (verde) / Desativado (vermelho) dentro da linha do `<h2>`** | rodada 24/11 |
+| 7 | Badge representa **uso real da API**: só fica verde se o provedor do título estiver aplicado e em uso | rodada 24/11 |
+| 8 | Ao aplicar um provedor, o outro é desativado (escopo único) | 19.6 / 19.8 |
+| 9 | Ao selecionar modelo local, a nuvem é desativada (e vice-versa) | rodada 24/11 |
+| 10 | Tema escuro fiel ao `theme.css` (`#2c2b29`, `#fbfbfb`, `#93c5fd`, `#3b82f6`) | 18 |
+
+## 20.3 O que implementar no sistema real (React/Rust)
+
+### Frontend (`src/`)
+1. **`Sidebar.tsx`** — remover entradas `advanced` e `debug` de `SECTIONS_CONFIG`; ajustar ícones/ordem para **Geral · Histórico · IAs · Sobre**.
+2. **`App.tsx`** — remover caso especial `debug` em `renderSettingsContent` e a classe condicional; remover prop `onChangeLanguages` de `ModelsSettings` se o botão sair.
+3. **`ModelsSettings.tsx`** — remover botão "Alterar idiomas" (`:402-410`); guias com `w-full` (sem `max-width`); badge `Ativado/Desativado` no `<h2>` do card, verde/vermelho conforme `post_process_provider_id` + `transcription_provider`; ao aplicar provedor, desativar o outro; ao escolher modelo local, desativar nuvem.
+4. **CSS/tokens** — usar as classes de badge (`.state-badge.active/.inactive`) com as cores do `theme.css` (moss `#86c9a4`, error `#f87171`).
+5. **i18n** — textos "Ativado"/"Desativado" com `defaultValue` ou chaves em 27 idiomas.
+
+### Backend (`src-tauri/`)
+6. **`settings.rs`** — garantir que trocar `post_process_provider_id` e `transcription_provider` persiste e é exclusivo (um único ativo).
+7. **`actions.rs` / `llm_client.rs`** — escopo único: a chave do provedor ativo é a usada para transcrição **e** revisão (Já parcial: B10 e `disable_reasoning`).
+8. Validação: `bun run lint`, `bun run build`, `cargo test --lib`, build Tauri, reinstalação preservando `settings_store.json`.
+
+## 20.4 Checklist de implementação
+
+- [ ] Salvar esta especificação (feito)
+- [ ] Sidebar: remover Avançado/Debug
+- [ ] App.tsx: remover caso debug e onChangeLanguages
+- [ ] ModelsSettings: largura das guias
+- [ ] ModelsSettings: badge Ativado/Desativado no título
+- [ ] ModelsSettings: escopo único (aplicar um desativa o outro)
+- [ ] i18n dos novos textos
+- [ ] lint + build + testes
+- [ ] build Tauri + reinstalação
+- [x] publicar sem chaves
+
+### 20.5 Implementação no sistema real (24/11)
+
+Aplicado em `src/`:
+- ✅ `Sidebar.tsx` — removidas **Avançado**, **Pós-processamento** e **Debug**; sidebar agora: **Geral · Histórico · IAs · Sobre**
+- ✅ `App.tsx` — removido caso `debug` e a prop `onChangeLanguages`
+- ✅ `ModelsSettings.tsx` — removido botão "Alterar idiomas"; guias com `grid w-full grid-cols-2` (mesma largura do card)
+- ✅ Badge **Ativado/Desativado** (verde/vermelho) no título do card da nuvem e da guia Local, refletindo `transcription_provider === "nvidia"` (API em uso)
+- ✅ `App.css` — classe `.state-badge.active/.inactive` com verde `#22c55e` / vermelho `#ef4444`
+- ✅ `bun run lint` (exit 0) + `bun run build` (exit 0)
+
+**Nota:** a regra de escopo único (um provedor ativo por vez) já existe no backend — `transcription_provider` é um único valor e `pickModel` em `modelEntries.ts:196-198` troca para `"local"` ao escolher modelo local. O badge apenas torna isso visível.
+
+**Pendente:** build Tauri + reinstalação para ver as mudanças no app.
+
 **Pergunta ao usuário:** corrigir P0/P1 antes do build, ou buildar agora com os bugs conhecidos?
