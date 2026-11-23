@@ -619,3 +619,50 @@ Foram identificados e **removidos**:
 - Nenhuma correção de código aplicada nesta rodada.
 - 7 planos obsoletos removidos (12.6).
 - GitHub atualizado até `e115e1d` (mais o commit de limpeza e este documento).
+
+---
+
+## APÊNDICE A — conhecimento consolidado (mesclado de arquivos antigos)
+
+> Esta seção substitui os arquivos removidos. Tudo que havia de útil neles está aqui.
+> Índice geral em `INDICE.md`.
+
+### A.1 Do plano 010 (OpenRouter → NVIDIA)
+
+- Descoberta crítica: a chave NVIDIA expira (~24 h) e o `function-id` muda quando o modelo é trocado; ambos precisam ser atualizados juntos.
+- Decisão: Parakeet via **Riva gRPC** (`grpc.nvcf.nvidia.com:443`), `language-code=pt-BR`, sem exigir saldo — diferente do OpenRouter.
+- Critério de aceite: saída **sempre em português**, sem traduzir para inglês.
+- Correção pós-instalação: modelo `nvidia/parakeet-1_1b-rnnt-multilingual-asr` e prompt de limpeza PT-BR.
+
+### A.2 Do plano 011 (Parakeet gRPC)
+
+- Riva `Recognize` unary sobre WAV PCM16 mono 16 kHz.
+- Conexão nova por fala (tentativa de cachear o canal com `connect_lazy` travava — revertida; ver `nvidia_riva.rs:55-57`).
+- Retry em erros transitórios; mensagens próprias para 401/403 e 429.
+- Critério de aceite: transcrição PT-BR rápida (~3 s) e precisa.
+
+### A.3 Do plano 012 (chave, modelos e qualidade)
+
+- Verificação de modelos usa a última gravação salva em `%APPDATA%\com.pais.handy\recordings\`.
+- Modelos que não transcrevem áudio são ocultos do dropdown.
+- Prompt PT-BR, remoção de muletas, `temperature: 0.1`, guarda de fidelidade (hoje em revisão — seção 12.3.1).
+- Chave e `function-id` **nunca** versionadas.
+
+### A.4 Do plano 013 (organização visual)
+
+- Modelos separados em seções: **nuvem primeiro (esquerda)**, local depois (direita), com rolagem.
+- Botões **Verificar configuração**, **Verificar modelos** e **Aplicar** independentes.
+- Overlay com indicador de voz (picos altos, próximos à borda).
+
+### A.5 De `instrucoes-transcricao-ptbr.md` (pesquisa Groq)
+
+- Arquitetura recomendada: transcrever → revisar com LLM. **Aplicado neste fork:** Riva faz a transcrição; Groq faz só a revisão (seção 10).
+- Modelo Groq escolhido: `openai/gpt-oss-120b` (melhor que `gpt-oss-20b` e `qwen/qwen3.8-27b` nos testes da seção 12.7).
+- API compatível com OpenAI: `https://api.groq.com/openai/v1`; chave em `GROQ_API_KEY` (somente `.env`).
+- Cloudflare rejeita user-agent padrão com HTTP 1010 → `llm_client.rs` envia UA de navegador.
+- Limites: 250K TPM / 1K RPM para gpt-oss (Developer Plan); paraTextos longos, blocos de ~3.000 caracteres e fallback em 429.
+- Regras de revisão (consolidadas com a pesquisa da seção 12.5): intervenção mínima, preservar sentido/nomes/números/estilo, corrigir ortografia (AO), acentuação, concordância verbal e nominal, regência, crase, pontuação — inclusive `?`/`!` por intenção.
+
+### A.6 Arquivos que NÃO são instruções do fork
+
+`CONTRIBUTING.md`, `CONTRIBUTING_TRANSLATIONS.md`, `.github/PULL_REQUEST_TEMPLATE.md`, `.github/ISSUE_TEMPLATE/*` e as regras de PR/issue em `AGENTS.md` pertencem ao **upstream (`cjpais/Handy`)**. Mantidos apenas como referência técnica. **Não devem ser aplicados a este fork** — as regras deste projeto estão neste arquivo e em `INDICE.md`.

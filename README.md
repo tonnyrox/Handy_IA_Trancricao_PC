@@ -105,8 +105,9 @@ Requer: `pip install nvidia-riva-client sounddevice numpy` no venv.
 - **Documentação original do upstream** foi substituída por este README detalhado do fork; arquivos como `BUILD.md`, `AGENTS.md`, `CONTRIBUTING.md` permanecem no repositório como referência técnica do projeto.
 
 ### Arquivos adicionados/organização neste fork
-- `.opencode/plans/001-setup-dev-handy.md` — plano de preparação do ambiente de desenvolvimento.
-- `.opencode/plans/002-trocar-rosa-por-azul-e-instalar.md` — plano e registro da troca de cor e tentativa/build/instalação.
+- `INDICE.md` — índice mestre da documentação (comece por aqui).
+- `MELHORIAS_TRANSCRICAO_PTBR.md` — documento vivo com diagnóstico, decisões e plano de melhorias.
+- `.opencode/plans/010` a `013` — histórico arquivado (resumo no apêndice do arquivo de melhorias).
 - `link.txt` — referência ao repositório upstream do Handy.
 - `.gitignore` — atualizado para ignorar `.tools/` (ferramentas locais de build, ex.: CMake portátil baixado durante a compilação).
 
