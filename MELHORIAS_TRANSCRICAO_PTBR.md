@@ -1098,8 +1098,10 @@ Aplicado em `src/components/settings/models/ModelsSettings.tsx`:
 4. [ ] P1.2 — validar ou desabilitar Nemotron no dropdown (**adiado** — dropdown mostra, mas usuário pode escolher; risco conhecido)
 5. [x] P2 — sincronizar documentação (seções, commits, nomes de aba em `README.md`, `nvidia_riva.rs`, `INDICE.md`)
 6. [ ] P2 — alinhar default da guia ao critério 16.5.2 (**adiado** — cosmético)
-7. [ ] P0.3/P1.1 — `cargo test --lib` → `bun run build` → `bun run tauri build --no-bundle` → reinstalar preservando `settings_store.json`
-8. [ ] Validar 5 falas do 13.6 + log `Starting LLM post-processing with provider 'groq'`
-9. [ ] Varredura de chaves no staged + publicar
+7. [x] P0.3/P1.1 — `cargo test --lib` (351 passaram) → `bun run build` → `bun run tauri build --no-bundle` (`Finished release profile`, 14:41) → reinstalar preservando `settings_store.json` e removendo o binário antigo
+8. [x] golden test Groq **10/10** (0,9 s médio) + app aberto e validado (janela "Handy", guias Nuvem/Local e rótulo IAs no novo binário)
+9. [ ] Varredura de chaves no staged + publicar (em andamento)
+
+**Nota final:** durante a validação, a regra de "string vazia" do prompt estava agressiva e apagava frases com conteúdo (8/10). Foi restringida a ruído exclusivo — **10/10 restaurado**. O prompt local e o `tools/golden_test.py` foram sincronizados.
 
 **Pergunta ao usuário:** corrigir P0/P1 antes do build, ou buildar agora com os bugs conhecidos?

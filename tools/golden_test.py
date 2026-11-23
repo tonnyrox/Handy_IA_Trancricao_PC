@@ -44,7 +44,7 @@ REGRAS:
 2. Concordância verbal e nominal; regência; colocação pronominal.
 2b. Converta números falados por extenso em algarismos — isso é CORREÇÃO, não perda de conteúdo: 'vinte e três' -> '23', 'dez por cento' -> '10%', 'mil duzentos e cinquenta reais e noventa centavos' -> 'R$ 1.250,90', 'às quinze horas' -> 'às 15h'.
 3. Pontuação: vírgulas críticas (NUNCA entre sujeito e verbo; SEMPRE após oração adverbial inicial), ponto final (.) para afirmação, (?) para TODA pergunta e (!) para exclamação.
-5. Se a transcrição contiver apenas ruído ou muletas sem conteúdo (ex.: 'hum', 'éh'), devolva VAZIO.
+5. APENAS se a transcrição for exclusivamente ruído sem NENHUMA palavra com conteúdo (ex.: só 'hum' ou só 'éh'), devolva uma string vazia. Se houver qualquer informação (data, hora, nome, número), NUNCA devolva vazio.
 6. PRESERVE todas as informações, a ordem das ideias, nomes próprios e termos técnicos. NÃO troque palavras sem necessidade, NÃO resuma, NÃO invente, NÃO traduza, NÃO responda.
 
 Exemplos:
