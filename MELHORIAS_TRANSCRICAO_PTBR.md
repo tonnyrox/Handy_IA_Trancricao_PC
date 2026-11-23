@@ -849,3 +849,107 @@ Foram identificados e **removidos**:
 **Nota:** `Groq` (com Q) — o código usa `https://api.groq.com/openai/v1`. Não há Grok/xAI no repositório.
 
 **Limitação das análises:** foram estáticas (não compilaram nem acessaram o `settings_store.json` local). A validação real depende do PASSO 5/6.
+
+---
+
+# 15. ANÁLISE: UNIFICAR PROVEDORES E ORGANIZAR A ABA DE MODELOS
+
+> **PLANEJAMENTO — NÃO EXECUTAR AINDA.** O usuário pediu análise e registro antes de qualquer mudança.
+> Data: 24/11/2026.
+
+## 15.1 A pergunta: por que duas chaves (NVIDIA + Groq)?
+
+**Resposta técnica curta:** hoje são **duas funções diferentes**, não dois modelos da mesma função:
+
+| Função | Modelo atual | Chave | O que faz |
+|---|---|---|---|
+| **Transcrição (ASR)** | NVIDIA Riva / Parakeet 1.1B | NVIDIA | áudio → texto cru |
+| **Revisão (LLM)** | Groq `gpt-oss-120b` | Groq | texto cru → texto corrigido |
+
+O Parakeet é um **modelo de fala** — ele não corrige gramática. O `gpt-oss-120b` é um **LLM** — ele não transcreve áudio. Por isso foram necessários dois provedores.
+
+**MAS o usuário está certo quanto ao objetivo:** é possível unificar em **uma chave só**, porque a própria NVIDIA oferece LLMs de revisão (Nemotron). Foi testado agora:
+
+### Teste real com o prompt refinado (mesmo prompt do app, 24/11)
+
+| Entrada | `nvidia/nemotron-3.5-lightning-30b-a3b` | `nvidia/nemotron-3.5-bolt-e4b` |
+|---|---|---|
+| `que horas sao voce sabe` | `Que horas são? Você sabe?` ✅ | `Que horas são? Você sabe?` ✅ |
+| `que legal ganhamos o jogo ontem` | `Que legal! Ganhamos o jogo ontem.` ✅ | idem ✅ |
+| `os homens foi na praca ontem` | `Os homens foram ao parque ontem.` ✅ | `Os homens foram à praça ontem.` ✅ |
+| `quando eu cheguei la ele ja tinha saiu` | `Quando eu cheguei lá, ele já tinha saído.` ✅ | idem ✅ |
+| `dez por cento de aumento` | `10% de aumento` ✅ | idem ✅ |
+
+**Conclusão do teste:** com o prompt refinado, o **Nemotron da NVIDIA corrige tão bem quanto o Groq**, usando a **mesma chave** da transcrição. As duas chaves não são mais necessárias.
+
+## 15.2 Opções de unificação (decisão pendente)
+
+| Opção | Como funciona | Vantagem | Risco |
+|---|---|---|---|
+| **A — unificar em NVIDIA (recomendada)** | Riva (ASR) + Nemotron 3.5 Lightning (revisão), **uma chave NVIDIA** | Mantém o ASR que já funciona; elimina a chave Groq; provider `nvidia` já reutiliza `nvidia_transcription_api_key()` (`actions.rs:285`) | Qualidade equivalente no teste, mas precisa validar com o golden test (10/10) antes de trocar |
+| **B — unificar em Groq** | Whisper turbo (ASR) + gpt-oss-120b (revisão), **uma chave Groq** | Uma chave só | Troca o ASR: Whisper turbo tem WER ~12% e limites de áudio/dia — **mais risco** |
+| **C — manter dois (atual)** | NVIDIA + Groq | Cada provedor especializado | Duas chaves, dois pontos de falha (o usuário quer evitar) |
+
+**Recomendação:** **Opção A**. O código já tem suporte ao provider `nvidia` para revisão (B10), basta trocar o modelo configurado e validar com o `golden_test.py`. A chave Groq pode ser removida do `settings_store.json` e do `.env` depois da validação.
+
+## 15.3 Estado atual da aba Modelos (mapeado)
+
+O arquivo `src/components/settings/models/ModelsSettings.tsx` **já separa nuvem e local**:
+
+- `:299-307` — `cloudSection` com rótulo "Modelo em uso (NVIDIA Cloud)".
+- `:309-364` — quando `transcriptionProvider === "nvidia"`, mostra **só a nuvem**; quando `"local"`, mostra só os modelos locais.
+- `:392-406` — seletor de duas opções: **NVIDIA Cloud** (ícone `Cloud`) e **Local** (ícone `Monitor`).
+
+**O que falta / está confuso:**
+1. A escolha do **modelo de revisão (LLM)** hoje é feita só editando `settings_store.json` — **não há UI** para selecionar `gpt-oss-120b` ou `nemotron`.
+2. A tela mostra "nuvem" como se fosse **apenas transcrição**, sem indicar que há um **segundo modelo (revisão)** trabalhando depois.
+3. Não há distinção visual entre "modelo de transcrição" e "modelo de revisão" — o usuário vê um só objeto "NVIDIA Cloud" e não entende o pipeline.
+
+## 15.4 Pontos críticos (elaborados)
+
+| ID | Ponto crítico | Impacto |
+|---|---|---|
+| C1 | Duas chaves para duas etapas do mesmo fluxo | Confusão, dois pontos de falha, duas renovações de credencial |
+| C2 | Modelo de revisão sem UI (config à mão) | Qualquer reset do store pode desligar a revisão — já foi o bug de "texto bruto" |
+| C3 | Aba Modelos mostra só "transcrição" | O usuário não enxerga a etapa de revisão e acha que o modelo único faz tudo |
+| C4 | Trocar o modelo de revisão sem medir | Pode regredir a qualidade — o `golden_test.py` (10/10) é a guarda |
+| C5 | `nvidia_transcription_model` é código morto (`shortcut/mod.rs:1638`) | Campo enganoso na UI/config — remover ou dar uso real |
+
+## 15.5 Plano proposto (aguardando decisão — NÃO executar)
+
+**Fase 1 — unificar (Opção A):**
+1. Rodar `golden_test.py` com `NVIDIA_API_KEY` e `nvidia/nemotron-3.5-lightning-30b-a3b` (meta: 10/10).
+2. Se passar: configurar provider `nvidia` para revisão no `settings_store.json` local; remover `"groq"` de `post_process_api_keys` e `GROQ_API_KEY` do `.env`.
+3. Ajustar `actions.rs` (B10 já reutiliza a chave NVIDIA — só confirmar) e `default_post_process_provider_id`/`default_model_for_provider` em `settings.rs` para `nvidia`/Nemotron.
+4. `cargo test --lib` + build + reinstalação + validação com as 5 falas do 13.6.
+
+**Fase 2 — organizar a aba Modelos:**
+5. Separar visualmente em **duas seções**: "Transcrição" (Riva/local) e "Revisão" (Nemotron/LLM), com ícones e descrição curta de cada etapa.
+6. Permitir **escolher o modelo de revisão na nuvem** via UI (dropdown com `nvidia/nemotron-3.5-lightning-30b-a3b` e `nvidia/nemotron-3.5-bolt-e4b`).
+7. Manter "Nuvem" e "Local" como filtros da **transcrição** (como já é hoje), sem misturar com a revisão.
+8. Remover/corrigir `nvidia_transcription_model` (C5).
+9. Atualizar i18n (`translation.json` em todos os idiomas) e `bindings.ts`.
+
+**Fase 3 — limpeza final:**
+10. Remover a chave Groq do `.env` e do `settings_store.json` **somente depois** da validação 10/10 com NVIDIA.
+11. Atualizar `README.md`, `INDICE.md` e esta seção com o estado final.
+
+## 15.6 Riscos e mitigações
+
+| Risco | Mitigação |
+|---|---|
+| Nemotron regredir em frases reais | `golden_test.py` 10/10 antes de trocar; manter Groq como reserva até validar |
+| Perder prompt refinado ao trocar provider | O prompt fica no `post_process_prompts`; só trocar o `post_process_models` |
+| UI nova quebrar i18n | `bun run check:translations` + `bun run build` |
+| Chave Groq removida antes da hora | Só remover no fim, após validação |
+
+## 15.7 Checklist (nada executado ainda)
+
+- [ ] Decidir Opção A (recomendada) ou C
+- [ ] golden test com Nemotron (meta 10/10)
+- [ ] Ajustar defaults e config local
+- [ ] Testes + build + reinstalação
+- [ ] UI: separar Transcrição / Revisão e dropdown do modelo de revisão
+- [ ] i18n + bindings
+- [ ] Remover chave Groq e campo morto
+- [ ] Publicar sem chaves
