@@ -9,6 +9,7 @@ Este repositório contém uma versão personalizada do **[Handy](https://github.
 
 - **Tema azul:** acento/brand da interface trocado de rosa/magenta para azul (tema claro e escuro), via tokens CSS.
 - **Transcrição cloud NVIDIA (PT-BR):** novo motor de transcrição em nuvem via **NVIDIA Riva ASR (Parakeet 1.1B Multilingual)** sobre gRPC, com idioma nativo `pt-BR`. Rápido (~3s), preciso e **sem exigir saldo/crédito** (diferente de OpenRouter, que exige saldo mínimo para áudio).
+- **Revisão gramatical PT-BR via Groq:** toda fala passa por um LLM (`openai/gpt-oss-120b`) que corrige pontuação (vírgulas, `?`, `!`, `.`), acentuação, concordância, regência e crase, preservando o conteúdo. A chave Groq fica apenas na configuração local do app — nunca no repositório. Ver `MELHORIAS_TRANSCRICAO_PTBR.md`.
 - **Sem etapas de onboarding:** o app abre direto na interface principal; a configuração é feita em **Configurações → Modelos**.
 - **Botões Verificar / Aplicar** para o modelo cloud; modelo aplicado é refletido como ativo na lista de modelos.
 - **Ferramentas de teste rápido** (sem buildar): `teste_rapido.py`, `teste_mic.py` (+ `.bat`), `riva_asr.py`.
@@ -108,7 +109,7 @@ Requer: `pip install nvidia-riva-client sounddevice numpy` no venv.
 - `INDICE.md` — índice mestre da documentação (comece por aqui).
 - `MELHORIAS_TRANSCRICAO_PTBR.md` — documento vivo com diagnóstico, decisões e plano de melhorias.
 - `.opencode/plans/010` a `013` — histórico arquivado (resumo no apêndice do arquivo de melhorias).
-- `link.txt` — referência ao repositório upstream do Handy.
+
 - `.gitignore` — atualizado para ignorar `.tools/` (ferramentas locais de build, ex.: CMake portátil baixado durante a compilação).
 
 ---

@@ -1,13 +1,13 @@
 # Índice da documentação — Handy fork PT-BR (tema azul)
 
 Este arquivo é o **ponto de entrada**. Aqui está everything que importa e onde está.
-Atualizado em 24/11/2026.
+Atualizado em 23/11/2026 (data dos commits). Revisado em 24/11/2026.
 
 ## 1. Arquivo mestre (comece aqui)
 
 | Arquivo | O que contém |
 |---|---|
-| **`MELHORIAS_TRANSCRICAO_PTBR.md`** | Diagnóstico, decisões, plano de melhorias e estado atual da transcrição PT-BR. É o documento vivo do projeto — **toda melhoria vai para cá**. Tem 12 seções + apêndice consolidado. |
+| **`MELHORIAS_TRANSCRICAO_PTBR.md`** | Diagnóstico, decisões, plano de melhorias e estado atual da transcrição PT-BR. É o documento vivo do projeto — **toda melhoria vai para cá**. Tem 14 seções + apêndice consolidado. **A seção 13 (PENTIFINO) prevalece sobre as anteriores; a 14 consolida as três análises externas.** |
 
 ## 2. Documentação do fork (aplicável ao nosso sistema)
 
@@ -42,7 +42,7 @@ Estes arquivos vieram do Handy original (`cjpais/Handy`). Servem de referência 
 | `.opencode/plans/001`, `002` | Setup inicial já concluído — registro preservado no `README.md` e no apêndice |
 | `CLAUDE.md` | Redundante (só dizia `Read @AGENTS.md`) |
 | `instrucoes-transcricao-ptbr.md` | Pesquisa externa sobre Groq — **mesclada no apêndice do arquivo mestre** |
-| Logs/scripts temporários (`.opencode/logs`, `.tools/*.ps1`, `*.py`) | Descartáveis; ferramentas de build ficam em `.tools/cmake-*` |
+| Logs temporários (`.opencode/logs`) e ferramentas locais (`.tools/*.ps1`, `*.py`) | Fora do git, ignorados pelo `.gitignore`. **Scripts de teste `.py`/`.bat` foram MANTIDOS** (`teste_rapido.py`, `teste_mic.py`, `riva_asr.py`, `tools/comparar_modelos.py`, `tools/golden_test.py`, `TESTE.bat`, `TESTE_MIC.bat`) — servem ao banco de frases (seção 9.2.2 do mestre) |
 
 ## 5. Regras para não repetir o erro
 

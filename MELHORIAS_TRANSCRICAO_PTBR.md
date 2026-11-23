@@ -413,7 +413,7 @@ Prompt usado (do documento, com regra explícita de `?`/`!`) e resultados:
 
 ## 11. ANÁLISE (24/11) — por que a correção "não está sendo aplicada"
 
-> **NÃO APLICAR NADA AINDA.** O usuário pediu para analisar, registrar e aguardar verificação antes de mudar qualquer código/config.
+> **STATUS:** diagnóstico confirmado. As correções propostas em 11.3 foram **aplicadas no commit `98d1966`** (ver seção 13/14). Este texto histórico é mantido para rastreabilidade.
 
 ### 11.1 Causa raiz encontrada: o LLM quase nunca é chamado
 
@@ -464,7 +464,7 @@ Testei o prompt `groq_ptbr_reviewer` direto na API com `gpt-oss-120b`, **fora do
 
 Ou seja: **quando o LLM roda, ele corrige bem vírgulas, concordância verbal, crase e acentuação**. O que falta é garantir que ele rode sempre.
 
-### 11.3 Correções propostas (aguardando verificação — NÃO aplicar ainda)
+### 11.3 Correções propostas (✅ aplicadas no commit `98d1966` — ver seção 13)
 
 1. **Remover ou relaxar `needs_llm_polish`** em `actions.rs`:
    - Melhor opção: **sempre chamar o LLM** no atalho principal quando `post_process_enabled && post_process_on_main_shortcut`, com exceção apenas de textos muito curtos (< 4 palavras) e vazios.
@@ -491,7 +491,7 @@ Ou seja: **quando o LLM roda, ele corrige bem vírgulas, concordância verbal, c
 
 ## 12. ANÁLISE PROFUNDA DO SISTEMA (24/11) — portrait completo
 
-> **NÃO APLICAR CORREÇÕES DE CÓDIGO AINDA.** Registrar, organizar e aguardar verificação. A limpeza de arquivos obsoletos foi autorizada pelo usuário e está tratada em 12.6.
+> **STATUS:** análise concluída. Os passos P0/P1/P2 de 12.7 foram aplicados no commit `98d1966` (ver seção 13). Falta apenas rebuild + reinstalação + validação (13.4, PASSOs 5–6).
 
 ### 12.1 As QUATRO barreiras em sequência (atalho principal / Caps Lock)
 
@@ -587,7 +587,7 @@ Foram identificados e **removidos**:
 
 **Espaço em disco (diagnóstico):** `src-tauri\target` ~9 GB, `node_modules` ~194 MB, `.tools` ~143 MB (CMake portátil), `.venv` ~96 MB, `.git` ~5 MB. `target` e `.tools` são regeneráveis; **não apagar agora** (build incremental depende deles).
 
-### 12.7 Plano de correção atualizado (aguardando verificação — NÃO aplicar)
+### 12.7 Plano de correção atualizado (✅ aplicado no commit `98d1966` — ver seção 13)
 
 **Prioridade P0 — fazer o LLM rodar sempre:**
 1. `actions.rs:916-926` — remover `needs_llm_polish`; chamar o LLM sempre que `post_process_enabled && post_process_on_main_shortcut`, exceto texto vazio/`< 3 palavras`. **Nunca usar presença de pontuação como critério** (é o sintoma a corrigir).
@@ -687,7 +687,7 @@ Foram identificados e **removidos**:
 
 | Item | Estado |
 |---|---|
-| Repo | Limpo, commit `ae1e79c` |
+| Repo | Limpo, commit `98d1966` |
 | Documentação | `INDICE.md` (índice) + `MELHORIAS...` (mestre); 11 MDs restantes, todos classificados |
 | Windsurf/Cursor/Claude | **Não existem** no perfil nem no projeto — nada a limpar |
 | Handy instalado | `%LOCALAPPDATA%\Programs\Handy`, v0.10.1, Groq `gpt-oss-120b` configurado |
@@ -776,11 +776,74 @@ Foram identificados e **removidos**:
 
 ## 13.7 Checklist de execução (marcar conforme executa)
 
-- [ ] 13.3 verificação prévia
-- [ ] PASSO 1 — gate do LLM
-- [ ] PASSO 2 — gate duplo
-- [ ] PASSO 3 — fidelity_guard
-- [ ] PASSO 4 — pontuação final
-- [ ] PASSO 5 — testes/build/instalação
-- [ ] PASSO 6 — validação/publicação
+- [x] 13.3 verificação prévia (código inspecionado; 350 testes passaram)
+- [x] PASSO 1 — gate do LLM (commit `98d1966`)
+- [x] PASSO 2 — gate duplo (commit `98d1966`)
+- [x] PASSO 3 — fidelity_guard (commit `98d1966`)
+- [x] PASSO 4 — pontuação final (commit `98d1966`)
+- [ ] PASSO 5 — testes/build/instalação (**build cancelado a pedido do usuário; aguardando revisão**)
+- [ ] PASSO 6 — validação/publicação com 5 falas reais
 - [ ] Atualizar estado atual em 13.2
+
+---
+
+# 14. CONSOLIDAÇÃO DAS TRÊS ANÁLISES (`ler.md`) — 24/11/2026
+
+> O usuário forneceu `ler.md` com três avaliações independentes (Google, GROK, Z Ai). O conteúdo útil foi mesclado aqui. **O arquivo `ler.md` pode ser descartado** depois desta consolidação (regra 13.1: uma fonte de verdade).
+
+## 14.1 O que as três concordam
+
+1. **O gargalo nunca foi o modelo nem o prompt** — era o `needs_llm_polish` (removido no commit `98d1966`).
+2. **`openai/gpt-oss-120b` é o melhor modelo Groq testado** para PT-BR (0,5–0,9 s).
+3. **A correção está no código, mas o PC ainda roda binário antigo** — falta rebuild + reinstalação (PASSO 5).
+4. **Nunca versionar chaves** — `.env` e `settings_store.json` fora do repo.
+
+## 14.2 Confirmações úteis das análises
+
+- **GROK:** configuração local já correta (provider `groq`, modelo, prompt `groq_ptbr_reviewer`, chave fora do repo); User-Agent presente; critério de sucesso = 5–10 falas reais com `?`/`!`/`.` e linha `Starting LLM post-processing with provider 'groq'` no log.
+- **Z Ai (verificação linha a linha do commit `98d1966`):**
+  - `needs_llm_polish` **não existe mais** (busca = zero resultados).
+  - `post_process_on_main_shortcut` saiu do gate — restou **um único gate**: `post_process_enabled` (PASSO 2 executado na forma simples).
+  - `fidelity_guard` (`:468-507`): <4 tokens aceita; prefixo de 3 letras; limiar 0.4; descarte → `Failed` com aviso; guard também nos fallbacks de JSON.
+  - Pontuação final por intenção em `text.rs:15-53` com testes.
+  - Corretor determinístico chamado em **todos** os caminhos (`transcription.rs:1788`).
+  - Provider `groq` em `settings.rs:838-844`; UA em `llm_client.rs:258`; `strip_think_block` presente.
+  - Varredura por `gsk_…`/`nvapi-…`/`sk-…`: **zero chaves versionadas**.
+- **Google:** README ainda descreve NVIDIA como motor principal e não menciona a revisão Groq — identificado como P2 (corrigido nesta rodada).
+
+## 14.3 Pendências consolidadas (ordem de prioridade)
+
+### P0 — fazer antes/de junto do rebuild
+| ID | Pendência | Local | Ação |
+|---|---|---|---|
+| P0.1 | Defaults do fork ainda são do upstream | `settings.rs:777`, `:795`, `post_process_models`, `post_process_selected_prompt_id` | `post_process_enabled=true`, provider `groq`, modelo `openai/gpt-oss-120b`, prompt selecionado por default, e `ensure_post_process_defaults` preenchendo o prompt quando `None`. **Sem isso, uma reinstalação com store perdido devolve ao problema original.** |
+| P0.2 | `groq` fora do `disable_reasoning` | `actions.rs:299-302` | Incluir `"groq"` em `matches!(...)`. O `llm_client` já tem retry sem o campo se o endpoint rejeitar — risco baixo. |
+| P0.3 | Rebuild + reinstalação + validação (PASSOs 5 e 6) | — | `cargo test --lib` → `bun run build` → `bun run tauri build --no-bundle` → reinstalar preservando `settings_store.json` → validar as 5 falas do 13.6 + log do provider. **Este é o motivo direto do texto ainda sair bruto.** |
+
+### P1 — qualidade/robustez
+- **P1.1** Elevar logs de `no provider` / `no model` / `no prompt` de `debug!` para `warn!`/notice.
+- **P1.2** Log `info` no gate com o motivo quando a revisão não for chamada.
+- **P1.3** `tools/golden_test.py` hoje lê `NVIDIA_API_KEY` — adicionar suporte a `GROQ_API_KEY` + `openai/gpt-oss-120b` (mesmo formato OpenAI, trocar base URL).
+- **P1.4** Toggle de pós-processamento está em **Configurações → Avançado → Experimental** (o MD 12.4 dizia "Debug" — **corrigido**: é Avançado/Experimental, exige `experimental_enabled=true`).
+- **P1.5** Teste unitário do gate novo (frase de 8 palavras com vírgula deve disparar revisão) — trava a regra "nunca usar pontuação como critério".
+
+### P2 — documentação (executado nesta rodada)
+- [x] Seções 11 e 12: status atualizado (o "NÃO APLICAR" era anterior ao commit `98d1966`).
+- [x] 13.2: commit `ae1e79c` → `98d1966`.
+- [x] 13.7: PASSOs 1–4 marcados como concluídos; 5–6 pendentes.
+- [x] `INDICE.md`: "12 seções" → "13 seções"; linha dos `*.py` corrigida; nota de que a seção 13 prevalece.
+- [x] `README.md`: removida menção a `link.txt` (não existe mais); adicionada a revisão Groq nas "Principais alterações".
+- [ ] Mover Apêndice A para o final do mestre (a seção 13 está no meio do apêndice) — **adiado**, sem perda de conteúdo.
+- [ ] Padronizar datas 23/11 vs 24/11 (commits são de 23/11) — **adiado**.
+
+## 14.4 Ordem de execução recomendada (atualizada)
+
+1. P0.1 + P0.2 + P1.5 + P1.2 em **uma rodada de código**.
+2. P0.3 — testes, build, reinstalação preservando `settings_store.json`.
+3. Validação com as 5 falas do 13.6 + log do provider.
+4. Publicar com varredura de chaves.
+5. Depois: P1.3 (golden test Groq) e P1.4 (toggle fora do experimental).
+
+**Nota:** `Groq` (com Q) — o código usa `https://api.groq.com/openai/v1`. Não há Grok/xAI no repositório.
+
+**Limitação das análises:** foram estáticas (não compilaram nem acessaram o `settings_store.json` local). A validação real depende do PASSO 5/6.
