@@ -419,6 +419,91 @@
     color: var(--ink-3);
   }
 
+  /* Indicador de modo ativo/inativo (Nuvem vs Local) — verde = ativo, vermelho = inativo */
+  .mode-indicator {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--wash);
+  }
+
+  .mode-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    font-weight: 650;
+    padding: 5px 11px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    white-space: nowrap;
+  }
+
+  .mode-chip.active {
+    color: var(--moss);
+    border-color: color-mix(in srgb, var(--moss) 45%, transparent);
+    background: color-mix(in srgb, var(--moss) 12%, transparent);
+  }
+
+  .mode-chip.inactive {
+    color: var(--error);
+    border-color: color-mix(in srgb, var(--error) 40%, transparent);
+    background: color-mix(in srgb, var(--error) 8%, transparent);
+  }
+
+  .mode-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .mode-chip.active .mode-dot {
+    background: #22c55e;
+    box-shadow: 0 0 0 3px color-mix(in srgb, #22c55e 22%, transparent);
+  }
+
+  .mode-chip.inactive .mode-dot {
+    background: #ef4444;
+    box-shadow: 0 0 0 3px color-mix(in srgb, #ef4444 20%, transparent);
+  }
+
+  .mode-indicator-note {
+    font-size: 11.5px;
+    color: var(--ink-3);
+  }
+
+  /* Badge de estado no título do card: ativado (verde) / desativado (vermelho) */
+  .state-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+    vertical-align: middle;
+    margin-left: 8px;
+  }
+
+  .state-badge.active {
+    color: #22c55e;
+    border: 1px solid color-mix(in srgb, #22c55e 45%, transparent);
+    background: color-mix(in srgb, #22c55e 12%, transparent);
+  }
+
+  .state-badge.inactive {
+    color: #ef4444;
+    border: 1px solid color-mix(in srgb, #ef4444 45%, transparent);
+    background: color-mix(in srgb, #ef4444 10%, transparent);
+  }
+
   label {
     display: block;
     font-size: 12.5px;
@@ -874,10 +959,17 @@
          GUIA 1: NUVEM (Escopo Único por Provedor — Sem misturar APIs)
          ====================================================================== -->
     <section id="cloud">
+      <!-- Indicador de modo: verde = ativo, vermelho = desativado -->
+      <div class="mode-indicator">
+        <span class="mode-chip active" id="chipCloudMode"><span class="mode-dot"></span>Nuvem · ativa</span>
+        <span class="mode-chip inactive" id="chipLocalMode"><span class="mode-dot"></span>Local · desativado</span>
+        <span class="mode-indicator-note">Apenas um modo ativo por vez. Aplicar na nuvem desativa o modo local.</span>
+      </div>
+
       <div class="card">
         <div class="card-header">
           <div>
-            <h2 class="card-title" id="cloudCardTitle">Configuração de Nuvem — Groq</h2>
+            <h2 class="card-title" id="cloudCardTitle">Configuração de Nuvem — Groq <span class="state-badge active" id="cloudStateBadge">Ativado</span></h2>
             <p class="card-desc">Escopo único: toda a transcrição e processamento usam exclusivamente a API do provedor escolhido.</p>
           </div>
           <span class="badge-pill" id="providerBadge">API Única · Groq</span>
@@ -900,13 +992,6 @@
           </select>
           <div class="hint" id="providerHint">
             Escopo único: toda a transcrição e processamento usam exclusivamente a API da Groq.
-          </div>
-
-          <!-- Indicador visual de escopo único: só um provedor ativo por vez -->
-          <div class="exclusivity-row" id="exclusivityRow">
-            <span class="scope-pill active" id="pillGroq">Groq · ativo</span>
-            <span class="scope-pill inactive" id="pillNvidia">NVIDIA · inativo</span>
-            <span class="exclusivity-note">Ao aplicar um, o outro é desativado automaticamente.</span>
           </div>
         </div>
 
@@ -997,6 +1082,13 @@
          GUIA 2: LOCAL (Modelos offline clicáveis)
          ====================================================================== -->
     <section id="local" class="hidden">
+      <!-- Indicador de modo: verde = ativo, vermelho = desativado -->
+      <div class="mode-indicator">
+        <span class="mode-chip inactive" id="chipCloudModeLocal"><span class="mode-dot"></span>Nuvem · desativada</span>
+        <span class="mode-chip active" id="chipLocalModeLocal"><span class="mode-dot"></span>Local · ativo</span>
+        <span class="mode-indicator-note">Apenas um modo ativo por vez. Selecionar um modelo local desativa a nuvem.</span>
+      </div>
+
       <div class="retired">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         <span>Aviso sobre modelos aposentados</span>
@@ -1006,7 +1098,7 @@
       <div class="card">
         <div class="card-header">
           <div>
-            <h2 class="card-title">Seus modelos</h2>
+            <h2 class="card-title">Seus modelos <span class="state-badge inactive" id="localStateBadge">Desativado</span></h2>
             <p class="card-desc">Clique em um modelo baixado para defini-lo como ativo no dispositivo.</p>
           </div>
           <button class="btn" type="button" onclick="showToast('Lista de modelos locais atualizada')" title="Atualizar lista">
@@ -1159,7 +1251,8 @@
   // Estado local da tela para simulação fiel
   const state = {
     provider: 'groq',
-    activeProvider: 'groq', // escopo único: apenas um ativo por vez
+    activeProvider: 'groq', // escopo único: apenas um provedor ativo por vez
+    activeMode: 'cloud',    // escopo único: nuvem OU local, nunca os dois
     keyVisible: false,
     keysByProvider: {
       groq: 'gsk_demo98a7f6e5d4c3b2a19081726354',
@@ -1226,30 +1319,49 @@
     advInput.value = state.advancedByProvider[providerKey] || '';
     document.getElementById('advancedHint').textContent = cfg.advancedHint;
 
-    updateExclusivity();
+    updateModeIndicators();
     onModelChange(true);
   }
 
   /**
-   * Atualiza o indicador visual de escopo único: mostra qual provedor está
-   * ATIVO (aplicado) e qual está INATIVO.
+   * Escopo único: verde = ativo, vermelho = desativado.
+   * Atualiza os indicadores das duas guias e os badges dos títulos.
    */
-  function updateExclusivity() {
-    const ativo = state.activeProvider;
-    const inativo = ativo === 'groq' ? 'nvidia' : 'groq';
-    const pillAtivo = document.getElementById('pillGroq');
-    const pillInativo = document.getElementById('pillNvidia');
+  function updateModeIndicators() {
+    const cloudAtivo = state.activeMode === 'cloud';
 
-    for (const [key, pill] of [['groq', pillAtivo], ['nvidia', pillInativo]]) {
-      if (key === ativo) {
-        pill.textContent = `${PROVIDERS_CONFIG[key].name} · ativo`;
-        pill.classList.add('active');
-        pill.classList.remove('inactive');
-      } else {
-        pill.textContent = `${PROVIDERS_CONFIG[key].name} · inativo`;
-        pill.classList.remove('active');
-        pill.classList.add('inactive');
+    // Indicadores no topo da guia Nuvem e da guia Local
+    const sets = [
+      ['chipCloudMode', 'chipLocalMode', cloudAtivo],
+      ['chipCloudModeLocal', 'chipLocalModeLocal', cloudAtivo],
+    ];
+    for (const [cloudId, localId] of sets) {
+      const cloud = document.getElementById(cloudId);
+      const local = document.getElementById(localId);
+      if (!cloud || !local) continue;
+      cloud.textContent = cloudAtivo ? 'Nuvem · ativa' : 'Nuvem · desativada';
+      local.textContent = cloudAtivo ? 'Local · desativado' : 'Local · ativo';
+      cloud.className = `mode-chip ${cloudAtivo ? 'active' : 'inactive'}`;
+      local.className = `mode-chip ${cloudAtivo ? 'inactive' : 'active'}`;
+      // Restaura o ponto colorido interno (sem duplicar)
+      if (!cloud.querySelector('.mode-dot')) {
+        cloud.insertAdjacentHTML('afterbegin', '<span class="mode-dot"></span>');
       }
+      if (!local.querySelector('.mode-dot')) {
+        local.insertAdjacentHTML('afterbegin', '<span class="mode-dot"></span>');
+      }
+    }
+
+    // Badges dos títulos: Ativado (verde) / Desativado (vermelho)
+    const cloudBadge = document.getElementById('cloudStateBadge');
+    const localBadge = document.getElementById('localStateBadge');
+    if (cloudBadge) {
+      cloudBadge.textContent = cloudAtivo ? 'Ativado' : 'Desativado';
+      cloudBadge.className = `state-badge ${cloudAtivo ? 'active' : 'inactive'}`;
+    }
+    if (localBadge) {
+      localBadge.textContent = cloudAtivo ? 'Desativado' : 'Ativado';
+      localBadge.className = `state-badge ${cloudAtivo ? 'inactive' : 'active'}`;
     }
   }
 
@@ -1375,7 +1487,8 @@
     // Escopo único: aplicar um provedor desativa o outro automaticamente.
     const inativo = state.provider === 'groq' ? 'NVIDIA' : 'Groq';
     state.activeProvider = state.provider;
-    updateExclusivity();
+    state.activeMode = 'cloud';
+    updateModeIndicators();
 
     panel.classList.remove('warn');
     document.getElementById('statusApplyLine').innerHTML =
@@ -1437,7 +1550,10 @@
     badge.textContent = 'em uso';
     rowEl.appendChild(badge);
 
-    showToast(`Modelo local "${modelName}" selecionado.`);
+    // Escopo único: selecionar modelo local desativa a nuvem.
+    state.activeMode = 'local';
+    updateModeIndicators();
+    showToast(`${modelName} ativo · Nuvem desativada (escopo único).`);
   }
 
   /**
