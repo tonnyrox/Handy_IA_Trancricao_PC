@@ -406,3 +406,83 @@ Prompt usado (do documento, com regra explícita de `?`/`!`) e resultados:
 - [ ] Aplicar configuração local com provider `groq`
 - [ ] Rodar `cargo test --lib` + build + reinstalar
 - [ ] Commit/push sem chaves (a chave Groq **nunca** deve entrar no repo)
+
+**Status:** itens 10.2–10.4 concluídos. Commits `4aba0da` e `c249e45` publicados. App reinstalado com Groq ativo.
+
+---
+
+## 11. ANÁLISE (24/11) — por que a correção "não está sendo aplicada"
+
+> **NÃO APLICAR NADA AINDA.** O usuário pediu para analisar, registrar e aguardar verificação antes de mudar qualquer código/config.
+
+### 11.1 Causa raiz encontrada: o LLM quase nunca é chamado
+
+O culpado é o filtro `needs_llm_polish` em `actions.rs:455` (eu mesmo adicionei no item 3.1):
+
+```rust
+fn needs_llm_polish(text: &str) -> bool {
+    let words = text.split_whitespace().count();
+    if words < 4 { return false; }
+    let has_inner_punct = text.trim_end_matches(['.', '!', '?'])
+        .chars().any(|c| matches!(c, ',' | ';' | ':' | '.' | '?' | '!'));
+    words > 12 && !has_inner_punct
+}
+```
+
+Ele **só deixa o LLM rodar se o texto tiver mais de 12 palavras E nenhuma pontuação interna**. Na prática isso é quase impossível, porque:
+
+1. O Riva já devolve texto com `enable_automatic_punctuation: true` → quase sempre há vírgula/ponto → `has_inner_punct = true` → **bloqueia**.
+2. A maioria das falas tem menos de 13 palavras → **bloqueia**.
+
+**Evidência (simulação do filtro com frases reais):**
+
+| Frase | Palavras | Resultado do filtro |
+|---|---:|---|
+| `os homens foi na praca ontem e eles compraram maças` | 10 | **BLOQUEIA** |
+| `eu comprei pra ela um presente e ela agradeceu a mim` | 11 | **BLOQUEIA** |
+| `quando eu cheguei la ele ja tinha saiu` | 8 | **BLOQUEIA** |
+| `maria que mora aqui perto trouxe o bolo que sua mae fez` | 12 | **BLOQUEIA** |
+| `nos vamos amanha cedo se o tempo melhorar` | 8 | **BLOQUEIA** |
+| `e ai tudo bem` | 4 | **BLOQUEIA** |
+| `oi tudo bem eu queria falar ... depois volta amanha` | 19 | RODA (sem pontuação) |
+| `Os homens foi na praça, ontem, e eles compraram maçãs.` | 10 | **BLOQUEIA** (tem vírgula) |
+| `Maria, que mora aqui perto, trouxe o bolo.` | 8 | **BLOQUEIA** (tem vírgula) |
+
+Conclusão: o Groq está configurado e funcional, mas **o atalho principal não o invoca** nas falas do dia a dia. O texto colado é basicamente o corretor determinístico local + o que o Riva devolveu.
+
+### 11.2 O modelo/prompt NÃO são o problema (teste direto na API)
+
+Testei o prompt `groq_ptbr_reviewer` direto na API com `gpt-oss-120b`, **fora do app**:
+
+| Entrada | Saída da API |
+|---|---|
+| `os homens foi na praca ontem e eles compraram maças` | `Os homens foram à praça ontem e compraram maçãs.` ✅ concordância + crase + acento |
+| `eu comprei pra ela um presente e ela agradeceu a mim` | `Eu comprei para ela um presente e ela me agradeceu.` ✅ |
+| `quando eu cheguei la ele ja tinha saiu` | `Quando eu cheguei lá, ele já tinha saído.` ✅ vírgula + acento |
+| `maria que mora aqui perto trouxe o bolo que sua mae fez` | `Maria, que mora aqui perto, trouxe o bolo que sua mãe fez.` ✅ vírgulas de aposto |
+| `nos vamos amanha cedo se o tempo melhorar` | `Nós vamos amanhã cedo, se o tempo melhorar.` ✅ vírgula antes da subordinada |
+
+Ou seja: **quando o LLM roda, ele corrige bem vírgulas, concordância verbal, crase e acentuação**. O que falta é garantir que ele rode sempre.
+
+### 11.3 Correções propostas (aguardando verificação — NÃO aplicar ainda)
+
+1. **Remover ou relaxar `needs_llm_polish`** em `actions.rs`:
+   - Melhor opção: **sempre chamar o LLM** no atalho principal quando `post_process_enabled && post_process_on_main_shortcut`, com exceção apenas de textos muito curtos (< 4 palavras) e vazios.
+   - Se quiser manter algum filtro por latência/custo: usar só `words < 3` como critério, e **nunca** usar presença de pontuação como critério (é exatamente o que precisamos corrigir).
+2. **Ajustar `fidelity_guard`** (`actions.rs:470`): hoje ele descarta a revisão se menos de 60% das palavras originais sobrevivem. Como o Groq corrige "pra" → "para" e "foi" → "foram", isso pode derrubar a taxa e fazer o app **descartar justamente a correção**. Verificar com日志 antes de mexer.
+3. **Conferir se o prompt está chegando ao LLM**: o `build_system_prompt` envolve o prompt; confirmar que `${output}` é substituído pelo texto transcrito e que não há conflito entre o prompt do app e o prompt do sistema.
+4. **Validar de ponta a ponta**: gravar 5 falas, comparar (a) texto cru do Riva, (b) texto colado pelo app. Se (b) == (a), o LLM não rodou; se (b) difere, verificar se a diferença é a correção esperada.
+
+### 11.4 Checklist antes de aplicar (verificação combinada)
+
+- [ ] Confirmar com teste automatizado que `needs_llm_polish` bloqueia as frases da tabela 11.1.
+- [ ] Confirmar que o provider `groq` está ativo no `settings_store.json` com chave e modelo corretos.
+- [ ] Fazer uma gravação real e verificar se o app chamou a API Groq (log do debug: `Starting LLM post-processing with provider 'groq'`).
+- [ ] Só depois disso: implementar 11.3.1 e ajustar 11.3.2 se necessário.
+- [ ] Rodar `cargo test --lib`, build, reinstalar, commit/push sem chaves.
+
+### 11.5 Estado atual (inalterado para esta análise)
+
+- Nenhum código ou configuração foi modificado nesta rodada.
+- App segue com Groq `gpt-oss-120b` configurado, porém com o filtro bloqueando o LLM no atalho principal.
+- GitHub segue em `c249e45`.
