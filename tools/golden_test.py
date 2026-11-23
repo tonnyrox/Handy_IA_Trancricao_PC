@@ -101,7 +101,10 @@ def main():
     ok = 0
     tempos = []
     print(f"PROVEDOR: {PROVIDER} | MODELO: {MODEL}")
-    for c in cases:
+    for i, c in enumerate(cases):
+        # Respeita o rate limit da Groq entre chamadas consecutivas.
+        if i > 0:
+            time.sleep(0.6)
         t0 = time.time()
         try:
             saida = revisar(c["input"])

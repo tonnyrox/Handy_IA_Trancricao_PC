@@ -1347,4 +1347,15 @@ Aplicado em `src/`:
 
 **Verificação final:** `bun run lint` (0), `bun run build` (0), `bun run check:translations` (0). `cargo check --lib` (0). **Liberado para build Tauri.**
 
+### 20.8 Build, instalação e validação final (concluído)
+
+- ✅ `bun run tauri build --no-bundle` → `Finished release profile` (12m16s), binário 16:54
+- ✅ Desinstalado o antigo, instalado o novo preservando `settings_store.json`
+- ✅ App aberto e validado (janela "Handy")
+- ⚠️ Golden test oscilou 9/10 e 4/10 com `[ERRO HTTPError]` — diagnose: **429 de rate limit da Groq** ao fazer 10 chamadas seguidas (o endpoint responde 200 isoladamente). Corrigido com `time.sleep(0.6)` entre casos em `tools/golden_test.py`.
+- ✅ Golden test final: **10/10, 0,8 s médio**
+- ✅ Chaves reais: 0 no repo e 0 no histórico
+
+**Estado final:** sistema atualizado com o layout IAs (sidebar enxuta, guias alinhadas, badges Ativado/Desativado, escopo único), revisão Groq validada, traduções completas e CI de `check:translations` verde.
+
 **Pergunta ao usuário:** corrigir P0/P1 antes do build, ou buildar agora com os bugs conhecidos?
