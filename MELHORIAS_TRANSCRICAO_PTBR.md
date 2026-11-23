@@ -1210,4 +1210,26 @@ A tela troca **todos os textos, placeholder, hint, modelos, avançado e status**
 4. [ ] Implementar o backend de escopo único (19.3)
 5. [ ] Validar com build + reinstalação e comparar com o HTML lado a lado
 
+### 19.8 Remoção de campos e cópia de segurança (24/11)
+
+**Removidos de `preview-ias.html` nesta rodada (a pedido do usuário):**
+- ❌ Item **"Avançado"** da barra lateral (`.nav-item` com `selectNav(this, 'Avançado')`).
+- ❌ Bloco **`.head-actions`** inteiro: botões **"Copiar HTML"**, **"Baixar .html"** e **"Alterar idiomas"**.
+
+**A remover também do programa Rust (quando a tela React for ajustada):**
+- `Sidebar.tsx` — entrada `advanced` em `SECTIONS_CONFIG` (e o rótulo `sidebar.advanced` nos 27 idiomas, se aplicável).
+- Botão "Alterar idiomas" em `ModelsSettings.tsx:402-410` e `onChangeLanguages` em `App.tsx:22`.
+
+**Histórico/escopo:** esses campos eram utilitários de edição/exportação do HTML de prévia e navegação antiga — não fazem parte do layout最终. O histórico completo das decisões segue nas seções 13–19.
+
+**Cópia de segurança criada antes de mexer no Rust:**
+- `C:\Users\Tonny\Downloads\Handy_backuep_20261123.zip` — 272 arquivos, ~1,6 MB (fontes, configs, MDs, HTML; sem `.git`, `target`, `node_modules`, `.venv`, `.tools`, `dist`).
+
+**Checklist:**
+- [x] Remover "Avançado" do HTML
+- [x] Remover `.head-actions` do HTML
+- [x] Cópia de segurança do programa
+- [ ] Remover equivalentes no Rust/React (quando ajustar a tela)
+- [ ] Reabrir HTML e conferir com a outra pessoa
+
 **Pergunta ao usuário:** corrigir P0/P1 antes do build, ou buildar agora com os bugs conhecidos?
