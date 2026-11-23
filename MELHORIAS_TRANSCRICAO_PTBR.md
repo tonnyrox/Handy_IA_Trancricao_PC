@@ -305,3 +305,58 @@ Outros modelos testados e descartados: `google/gemma-*` (404/timeout), `minimaxa
 4. `cargo test --lib` + `bun run build` + `bun run tauri build --no-bundle`.
 5. Reinstalar preservando a chave e validar com o texto de exemplo acima.
 6. Fazer commit/push **somente das mudanças de código e deste MD** — nunca `.env`, `settings_store.json` ou chaves.
+
+**Status em 23/11/2026:** itens 8.1–8.4 concluídos. Testes 348/348, build OK, reinstalado, commit `e37abeb` publicado.
+
+---
+
+## 9. REGISTRO PARA AMANHÃ (24/11/2026) — não implementar hoje
+
+Observações do usuário após o teste real do dia 23/11. **Nada disso foi feito ainda** — é o próximo trabalho.
+
+### 9.1 Pontuação final está errada / ausente
+
+O texto já vem acentuado e com vírgulas, mas **a pontuação no fim da frase não está sendo aplicada corretamente**:
+
+- Não distingue **pergunta** (`?`) de **afirmação** (`.`) de **exclamação** (`!`).
+- Exemplo: `que horas são` deve virar `Que horas são?`; `que legal` deve virar `Que legal!`; `eu fui lá ontem` → `Eu fui lá ontem.`.
+- Hoje o modelo tende a terminar tudo com ponto, ou não pontua o fim.
+
+**Ações planejadas:**
+1. Reforçar o prompt `ptbr_grammar_fix` com regra explícita e exemplos few-shot de `?` e `!` (o prompt atual só cita "pontuação" de forma genérica).
+2. Ampliar o corretor determinístico local (`audio_toolkit/text.rs`, `normalize_ptbr_punctuation`) com:
+   - Lista de iniciadores de pergunta: `quem, qual, quais, quando, onde, como, por que, o que, que horas, será que, você acha que`.
+   - Lista curta de marcadores de exclamação: `que legal, que bom, uau, nossa, incrível, que medo, ai meu deus`.
+   - Só aplicar quando o texto **não** tiver pontuação final vinda do modelo.
+3. Adicionar testes unitários para os 3 casos (`?`, `!`, `.`).
+
+### 9.2 Gramática PT-BR ainda fraca
+
+O usuário relatou: *"a gramática ainda está um pouco ruim, não tão boa assim em comparação à língua portuguesa do Brasil. É de extrema importância — é a base de tudo."*
+
+**Ações planejadas:**
+1. **Testar outros modelos de API** (sempre NVIDIA, sem modelo local) com `thinking=false` e `max_tokens` maior — vários foram descartados às pressas e merecem reteste:
+   - `google/gemma-4-31b-it` (deu timeout; retestar com `max_tokens` menor/temperatura 0)
+   - `mistralai/mistral-large-4-1t-a52b` (devolveu vazio; retestar com `thinking=false`)
+   - `z-ai/glm-5.3-flash`, `moonshotai/kimi-k3.1-pro` (timeout; retestar)
+   - `nvidia/nemotron-3.5-bolt-e4b` (alternativa mais rápida que já respondeu)
+   - Critério: **qualidade gramatical PT-BR** > velocidade, mas manter meta de ~2 s para falas curtas.
+2. Criar um **banco de frases de teste** (10–20 frases com vírgula de vocativo, subordinada, crase, concordância, plural, pergunta, exclamação) e comparar a saída modelo a modelo antes de trocar.
+3. Reforçar o prompt com regras explícitas de concordância verbal/nominal, regência e crase — **sem quebrar a fidelidade** (item 8.3: não trocar/remover/inventar palavras).
+4. Se nenhum modelo atingir o padrão, considerar **dois passos**: (1) corretor local determinístico + (2) LLM só para gramática, com prompt separado.
+
+### 9.3 Ordem sugerida para amanhã
+
+1. Rodar o banco de frases e escolher o melhor modelo de API (9.2.1–9.2.2).
+2. Ajustar prompt + corretor local para pontuação final (9.1).
+3. Testes unitários (`cargo test --lib`) e validação com API.
+4. Build → reinstalar preservando a chave.
+5. Commit/push sem dados pessoais (como em 8.4.6).
+
+### 9.4 Estado atual preservado (para retomar)
+
+- App instalado e funcionando em `%LOCALAPPDATA%\Programs\Handy`
+- Chave NVIDIA + Function-ID em `.env` e `%APPDATA%\com.pais.handy\settings_store.json` (fora do repo)
+- Provider `nvidia` ativo, modelo `nvidia/nemotron-3.5-lightning-30b-a3b`, prompt `ptbr_grammar_fix`
+- GitHub atualizado até o commit `e37abeb`
+- Repo limpo, sem dados sensíveis versionados
