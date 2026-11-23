@@ -383,6 +383,42 @@
     border-radius: 6px;
   }
 
+  /* Escopo único: indicador de qual provedor está ativo */
+  .exclusivity-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+
+  .scope-pill {
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    white-space: nowrap;
+  }
+
+  .scope-pill.active {
+    color: var(--moss);
+    border-color: color-mix(in srgb, var(--moss) 40%, transparent);
+    background: color-mix(in srgb, var(--moss) 12%, transparent);
+  }
+
+  .scope-pill.inactive {
+    color: var(--ink-3);
+    border-color: var(--line);
+    background: var(--wash);
+    text-decoration: line-through;
+  }
+
+  .exclusivity-note {
+    font-size: 11.5px;
+    color: var(--ink-3);
+  }
+
   label {
     display: block;
     font-size: 12.5px;
@@ -865,6 +901,13 @@
           <div class="hint" id="providerHint">
             Escopo único: toda a transcrição e processamento usam exclusivamente a API da Groq.
           </div>
+
+          <!-- Indicador visual de escopo único: só um provedor ativo por vez -->
+          <div class="exclusivity-row" id="exclusivityRow">
+            <span class="scope-pill active" id="pillGroq">Groq · ativo</span>
+            <span class="scope-pill inactive" id="pillNvidia">NVIDIA · inativo</span>
+            <span class="exclusivity-note">Ao aplicar um, o outro é desativado automaticamente.</span>
+          </div>
         </div>
 
         <!-- PASSO 2: CHAVE API KEY (Dinâmica para o provedor selecionado) -->
@@ -1116,6 +1159,7 @@
   // Estado local da tela para simulação fiel
   const state = {
     provider: 'groq',
+    activeProvider: 'groq', // escopo único: apenas um ativo por vez
     keyVisible: false,
     keysByProvider: {
       groq: 'gsk_demo98a7f6e5d4c3b2a19081726354',
@@ -1182,7 +1226,31 @@
     advInput.value = state.advancedByProvider[providerKey] || '';
     document.getElementById('advancedHint').textContent = cfg.advancedHint;
 
+    updateExclusivity();
     onModelChange(true);
+  }
+
+  /**
+   * Atualiza o indicador visual de escopo único: mostra qual provedor está
+   * ATIVO (aplicado) e qual está INATIVO.
+   */
+  function updateExclusivity() {
+    const ativo = state.activeProvider;
+    const inativo = ativo === 'groq' ? 'nvidia' : 'groq';
+    const pillAtivo = document.getElementById('pillGroq');
+    const pillInativo = document.getElementById('pillNvidia');
+
+    for (const [key, pill] of [['groq', pillAtivo], ['nvidia', pillInativo]]) {
+      if (key === ativo) {
+        pill.textContent = `${PROVIDERS_CONFIG[key].name} · ativo`;
+        pill.classList.add('active');
+        pill.classList.remove('inactive');
+      } else {
+        pill.textContent = `${PROVIDERS_CONFIG[key].name} · inativo`;
+        pill.classList.remove('active');
+        pill.classList.add('inactive');
+      }
+    }
   }
 
   /**
@@ -1304,10 +1372,15 @@
       return;
     }
 
+    // Escopo único: aplicar um provedor desativa o outro automaticamente.
+    const inativo = state.provider === 'groq' ? 'NVIDIA' : 'Groq';
+    state.activeProvider = state.provider;
+    updateExclusivity();
+
     panel.classList.remove('warn');
     document.getElementById('statusApplyLine').innerHTML =
-      `<span class="status-icon ok">✓</span><span><b>Aplicar:</b> Provedor único <strong>${cfg.name}</strong> (${modelLabel}) aplicado.</span>`;
-    showToast(`Configuração de ${cfg.name} aplicada!`);
+      `<span class="status-icon ok">✓</span><span><b>Aplicar:</b> Provedor único <strong>${cfg.name}</strong> (${modelLabel}) ativo. <strong>${inativo}</strong> desativado automaticamente.</span>`;
+    showToast(`${cfg.name} ativo · ${inativo} desativado (escopo único).`);
   }
 
   /**
