@@ -666,3 +666,121 @@ Foram identificados e **removidos**:
 ### A.6 Arquivos que NÃO são instruções do fork
 
 `CONTRIBUTING.md`, `CONTRIBUTING_TRANSLATIONS.md`, `.github/PULL_REQUEST_TEMPLATE.md`, `.github/ISSUE_TEMPLATE/*` e as regras de PR/issue em `AGENTS.md` pertencem ao **upstream (`cjpais/Handy`)**. Mantidos apenas como referência técnica. **Não devem ser aplicados a este fork** — as regras deste projeto estão neste arquivo e em `INDICE.md`.
+
+---
+
+# 13. PLANO DE AÇÃO REFINADO ("PENTIFINO") — seguir à risca
+
+> Versão 24/11/2026. Este é o **plano operacional**. Se houver conflito com qualquer seção anterior, **esta seção prevalece**.
+> Objetivo: parar de colar texto bruto/desorganizado e entregar PT-BR correto (vírgulas, concordância, `?`, `!`, `.`).
+
+## 13.1 Regras de ouro (não negociáveis)
+
+1. **Uma fonte de verdade:** `MELHORIAS_TRANSCRICAO_PTBR.md` + `INDICE.md`. Nenhum novo MD de plano.
+2. **Nunca seguir:** `CONTRIBUTING*`, templates `.github/`, regras de PR/issue do `AGENTS.md`. São do upstream.
+3. **Nunca versionar chave:** `GROQ_API_KEY`, `NVIDIA_API_KEY`, `NVIDIA_FUNCTION_ID`, `settings_store.json`, `.env`.
+4. **Antes de mexer no código:** rodar a verificação do 13.3. Depois de mexer: `cargo test --lib` + `bun run build`.
+5. **Nunca interromper build/test com timeout.** Se demorar, rodar em background e esperar a conclusão.
+6. **Cada passo tem verificação verificável.** Se falhar 2x, parar e registrar aqui antes de continuar.
+
+## 13.2 Estado atual inventariado (24/11)
+
+| Item | Estado |
+|---|---|
+| Repo | Limpo, commit `ae1e79c` |
+| Documentação | `INDICE.md` (índice) + `MELHORIAS...` (mestre); 11 MDs restantes, todos classificados |
+| Windsurf/Cursor/Claude | **Não existem** no perfil nem no projeto — nada a limpar |
+| Handy instalado | `%LOCALAPPDATA%\Programs\Handy`, v0.10.1, Groq `gpt-oss-120b` configurado |
+| Credenciais | `.env` (gitignore) + `settings_store.json` (fora do repo) |
+| Modelo | `openai/gpt-oss-120b` confirmado como o melhor da Groq |
+| Bugs mapeados | 4 barreiras (seção 12.1), 11 caminhos (12.3), `fidelity_guard` (12.3.1) |
+| Build | CMake 4.5.1 em `.tools/`, MSVC 18, `TRANSCRIBE_CMAKE_ARGS=-DTRANSCRIBE_VULKAN=OFF` |
+
+## 13.3 Verificação prévia (FAZER ANTES DE APLICAR)
+
+```
+[ ] 1. Gravar 5 falas reais (Caps Lock) e salvar o texto colado.
+[ ] 2. Comparar com o texto em %APPDATA%\com.pais.handy\history.db.
+[ ] 3. Rodar com --debug e procurar no log: "Starting LLM post-processing with provider 'groq'".
+[ ] 4. Se a linha NÃO aparecer → confirma-se barreira 3 (needs_llm_polish).
+[ ] 5. Se aparecer mas o texto continuar bruto → confirma-se barreira 4 (fidelity_guard).
+[ ] 6. Confirmar no settings_store.json: post_process_enabled, post_process_on_main_shortcut,
+       provider groq, modelo gpt-oss-120b, prompt groq_ptbr_reviewer, chave groq.
+```
+
+## 13.4 Ordem de execução (aplicar nesta ordem exata)
+
+### PASSO 1 — Fazer o LLM rodar no Caps Lock
+- Arquivo: `src-tauri/src/actions.rs`
+- Ação: remover a chamada a `needs_llm_polish` do gate em `:916-926`. Manter só:
+  `post_process_enabled && post_process_on_main_shortcut && !is_blank_transcription(&transcription)`.
+- **Verificação:** teste unitário novo provando que uma frase de 8 palavras **com vírgula** agora dispara revisão.
+- **Risco:** latência/custo por chamada. Mitigação: modelo ~0,7 s; Groq tem 250K TPM.
+
+### PASSO 2 — Eliminar o campo órfão / gate duplo
+- Arquivos: `settings.rs`, `actions.rs`, `bindings.ts`, `settingsStore.ts`
+- Ação (escolher UMA): **fazer `post_process_enabled` bastar** (remover `post_process_on_main_shortcut` do gate) — mais simples e à prova de erro. Manter o campo no store por compatibilidade, mas sem exigência.
+- **Verificação:** `cargo check --lib` + `bun run build` sem erro de tipo.
+
+### PASSO 3 — Não descartar a correção
+- Arquivo: `actions.rs` (`fidelity_guard`, `:470-501`)
+- Ação: limiar 0.6 → 0.4; comparar com similaridade fuzzy (Levenshtein normalizado) em vez de interseção exata; **transformar descarte em `PostProcessOutcome::Failed`** para o aviso aparecer.
+- Ação extra: aplicar o guard nos fallbacks de JSON (`:392-404`).
+- **Verificação:** teste com `foi→foram`, `pra→para`, `a mim→me` — a revisão deve ser **aceita**.
+
+### PASSO 4 — Pontuação final por intenção (P0 do usuário)
+- Arquivos: `audio_toolkit/text.rs`, prompt `groq_ptbr_reviewer` no `settings_store.json`
+- Ação: corretor local com iniciadores de pergunta (`quem, qual, quando, onde, como, por que, o que, que horas, será que`) e marcadores de exclamação (`que legal, uau, incrível, nossa, que bom`); só quando não houver pontuação final.
+- Prompt: regra explícita `.` / `?` / `!` + exemplos few-shot + dupla passada (12.5).
+- **Verificação:** teste unitário com os 3 casos.
+
+### PASSO 5 — Testes, build, instalação
+```
+[ ] cargo test --lib          → 0 falhas
+[ ] bun run build             → exit 0
+[ ] bun run tauri build --no-bundle → "Finished release profile"
+[ ] desinstalar Handy atual (preservar settings_store.json)
+[ ] copiar handy.exe + DLLs + resources
+[ ] recriar atalho + autostart
+[ ] abrir app e conferir janela
+```
+
+### PASSO 6 — Validação final e publicação
+```
+[ ] 5 falas reais coladas com pontuação/gramática corretas
+[ ] varredura de chaves no staged: 0
+[ ] git commit (conventional) + git push origin main
+[ ] atualizar "Estado atual" desta seção
+```
+
+## 13.5 Riscos e mitigações
+
+| Risco | Impacto | Mitigação |
+|---|---|---|
+| LLM falha / 429 | texto bruto colado | Manter fallback para o original + aviso `PostProcessFailed` |
+| `fidelity_guard` descarta correção | usuário acha que não funciona | Limiar 0.4 + fuzzy + aviso |
+| Campo órfão some ao reescrever store | gate desliga | `post_process_enabled` bastar |
+| Cloudflare 1010 | chamada falha | User-Agent já no `llm_client.rs` |
+| Build demorado / timeout | interrupção | Background, sem timeout, esperar conclusão |
+| Chave vazada | segurança | `.env` + gitignore + varredura no staged |
+
+## 13.6 Critérios de aceite (só encerrar quando TODOS passarem)
+
+1. `Que horas são você sabe` colado como **"Que horas são? Você sabe?"**
+2. `que legal ganhamos o jogo` colado como **"Que legal! Ganhamos o jogo."**
+3. `os homens foi na praca` colado como **"Os homens foram à praça."**
+4. `quando eu cheguei la ele ja tinha saiu` colado com **vírgula e acento**.
+5. Log do app mostra `Starting LLM post-processing with provider 'groq'` em cada fala.
+6. `cargo test --lib`: 0 falhas.
+7. Nenhuma chave no repo.
+
+## 13.7 Checklist de execução (marcar conforme executa)
+
+- [ ] 13.3 verificação prévia
+- [ ] PASSO 1 — gate do LLM
+- [ ] PASSO 2 — gate duplo
+- [ ] PASSO 3 — fidelity_guard
+- [ ] PASSO 4 — pontuação final
+- [ ] PASSO 5 — testes/build/instalação
+- [ ] PASSO 6 — validação/publicação
+- [ ] Atualizar estado atual em 13.2

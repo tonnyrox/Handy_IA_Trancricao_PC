@@ -386,12 +386,17 @@ async fn post_process_transcription(
                             let result = strip_invisible_chars(transcription_value);
                             // 2.5: guarda de fidelidade — se o LLM inventou/resumiu,
                             // preserva a transcrição original em vez de confiar nele.
-                            return PostProcessOutcome::Done(
-                                fidelity_guard(&user_content, result),
-                            );
+                            return match fidelity_guard(&user_content, result) {
+                                Some(text) => PostProcessOutcome::Done(text),
+                                None => PostProcessOutcome::Failed,
+                            };
                         } else {
                             error!("Structured output response missing 'transcription' field");
-                            return PostProcessOutcome::Done(strip_invisible_chars(content));
+                            let raw = strip_invisible_chars(content);
+                            return match fidelity_guard(&user_content, raw) {
+                                Some(text) => PostProcessOutcome::Done(text),
+                                None => PostProcessOutcome::Failed,
+                            };
                         }
                     }
                     Err(e) => {
@@ -399,7 +404,11 @@ async fn post_process_transcription(
                             "Failed to parse structured output JSON: {}. Returning raw content.",
                             e
                         );
-                        return PostProcessOutcome::Done(strip_invisible_chars(content));
+                        let raw = strip_invisible_chars(content);
+                        return match fidelity_guard(&user_content, raw) {
+                            Some(text) => PostProcessOutcome::Done(text),
+                            None => PostProcessOutcome::Failed,
+                        };
                     }
                 }
             }
@@ -433,7 +442,10 @@ async fn post_process_transcription(
         Ok(Some(content)) => {
             let content = strip_invisible_chars(strip_think_block(&content));
             // 2.5: guarda de fidelidade também no modo legacy.
-            PostProcessOutcome::Done(fidelity_guard(transcription, content))
+            match fidelity_guard(transcription, content) {
+                Some(text) => PostProcessOutcome::Done(text),
+                None => PostProcessOutcome::Failed,
+            }
         }
         Ok(None) => {
             error!("LLM API response has no content");
@@ -450,31 +462,11 @@ async fn post_process_transcription(
     }
 }
 
-/// Decide se vale a pena invocar o LLM no atalho principal: textos longos
-/// sem nenhuma pontuação interna são os que mais ganham com o polimento.
-fn needs_llm_polish(text: &str) -> bool {
-    let words = text.split_whitespace().count();
-    if words < 4 {
-        return false;
-    }
-    let has_inner_punct = text
-        .trim_end_matches(['.', '!', '?'])
-        .chars()
-        .any(|c| matches!(c, ',' | ';' | ':' | '.' | '?' | '!'));
-    words > 12 && !has_inner_punct
-}
-
 /// Guarda de fidelidade (item 2.5): se a "revisão" do LLM perdeu ou inventou
 /// muitas palavras (ex.: obedeceu a um comando dentro da fala), preserva o
 /// texto original em vez de aceitar uma alucinação silenciosa.
-fn fidelity_guard(original: &str, revised: String) -> String {
-    // Frases curtas com números por extenso ("dez por cento" -> "10%")
-    // derrubavam a taxa e eram descartadas em silêncio. O guard só vale
-    // quando há material suficiente para comparar.
-    if original.split_whitespace().count() < 8 {
-        return revised;
-    }
-    let words = |s: &str| -> std::collections::HashSet<String> {
+fn fidelity_guard(original: &str, revised: String) -> Option<String> {
+    let tokens = |s: &str| -> Vec<String> {
         s.to_lowercase()
             .split_whitespace()
             .filter_map(|w| {
@@ -483,21 +475,41 @@ fn fidelity_guard(original: &str, revised: String) -> String {
             })
             .collect()
     };
-    let orig = words(original);
-    let new = words(&revised);
-    if orig.is_empty() {
-        return revised;
+    let orig = tokens(original);
+    // Frases curtas: aceitar qualquer revisão (correções como "foi" -> "foram"
+    // derrubariam a taxa e fariam o app descartar justamente o que queremos).
+    if orig.len() < 4 {
+        return Some(revised);
     }
-    let kept = orig.intersection(&new).count();
+    let new = tokens(&revised);
+    // Comparação tolerante: mesma palavra ou mesmo prefixo de 3 letras.
+    // Assim "foi/foram", "pra/para", "saiu/saído" contam como preservados.
+    let kept = orig
+        .iter()
+        .filter(|o| {
+            new.iter().any(|n| {
+                if o.as_str() == n.as_str() {
+                    return true;
+                }
+                if o.chars().count() < 4 || n.chars().count() < 4 {
+                    return false;
+                }
+                let op: String = o.chars().take(3).collect();
+                let np: String = n.chars().take(3).collect();
+                op == np
+            })
+        })
+        .count();
     let ratio = kept as f64 / orig.len() as f64;
-    if ratio < 0.6 {
+    if ratio < 0.4 {
         warn!(
-            "LLM revision diverged too much ({:.0}% of words kept); keeping original transcript",
+            "LLM revision diverged too much ({:.0}% of words kept); discarding revision",
             ratio * 100.0
         );
-        return original.to_string();
+        None
+    } else {
+        Some(revised)
     }
-    revised
 }
 
 pub(crate) struct ProcessedTranscription {
@@ -913,13 +925,13 @@ impl ShortcutAction for TranscribeAction {
                                 utils::redact_text(&transcription)
                             );
 
-                            // Polimento PT-BR no atalho principal, apenas quando
-                            // compensa e o usuário habilitou (item 3.1 do plano).
+                            // Revisão PT-BR no atalho principal: sempre que habilitado.
+                            // NÃO usar presença de pontuação como critério — pontuação
+                            // errada é justamente o que precisamos corrigir (seção 13.4).
                             if !post_process {
                                 let settings = get_settings(&ah);
                                 if settings.post_process_enabled
-                                    && settings.post_process_on_main_shortcut
-                                    && needs_llm_polish(&transcription)
+                                    && !is_blank_transcription(&transcription)
                                 {
                                     post_process = true;
                                 }
@@ -1207,9 +1219,9 @@ pub static ACTION_MAP: Lazy<HashMap<String, Arc<dyn ShortcutAction>>> = Lazy::ne
 #[cfg(test)]
 mod tests {
     use super::{
-        complete_unless_cancelled, is_blank_transcription, non_blank_post_processed_text,
-        post_process_transcription, should_use_streaming_overlay, strip_invisible_chars,
-        strip_think_block, PostProcessOutcome,
+        complete_unless_cancelled, fidelity_guard, is_blank_transcription,
+        non_blank_post_processed_text, post_process_transcription, should_use_streaming_overlay,
+        strip_invisible_chars, strip_think_block, PostProcessOutcome,
     };
     use crate::settings::{get_default_settings, AppSettings, OverlayStyle};
     use std::future;
@@ -1289,16 +1301,24 @@ mod tests {
 
     #[test]
     fn hallucinated_revision_is_rejected_by_fidelity_guard() {
-        // O LLM "inventou" um texto sem relação → a original é preservada (2.5).
-        // Frase com 8+ palavras: o guard só atua quando há material para comparar.
+        // O LLM "inventou" um texto sem relação → a revisão é descartada e
+        // o aviso de falha aparece (seção 13.4, passo 3).
         let url = serve_once(r#"{"choices":[{"message":{"content":"a completely invented poem about something else entirely"}}]}"#);
         assert_eq!(
             run_post_process(
                 &post_process_settings(&url),
                 "hello there my friend how are you doing today"
             ),
-            PostProcessOutcome::Done("hello there my friend how are you doing today".to_string())
+            PostProcessOutcome::Failed
         );
+    }
+
+    #[test]
+    fn fidelity_guard_accepts_real_ptbr_corrections() {
+        // Correções reais não podem ser descartadas como "alucinação".
+        let original = "os homens foi na praca ontem e eles compraram maças";
+        let revisado = "Os homens foram à praça ontem e compraram maçãs.";
+        assert!(fidelity_guard(original, revisado.to_string()).is_some());
     }
 
     #[test]

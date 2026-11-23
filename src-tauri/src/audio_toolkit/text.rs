@@ -29,12 +29,30 @@ pub fn normalize_ptbr_punctuation(text: &str, add_final_period: bool) -> String 
         }
     }
 
-    // Ponto final só em frase com 4+ palavras terminando em letra/número.
-    if add_final_period
-        && out.chars().last().is_some_and(|c| c.is_alphanumeric())
-        && out.split_whitespace().count() >= 4
+    // Pontuação final por intenção (seção 13.4, passo 4).
+    if out.chars().last().is_some_and(|c| c.is_alphanumeric())
+        && out.split_whitespace().count() >= 2
     {
-        out.push('.');
+        let lower = out.to_lowercase();
+        let is_question = [
+            "quem ", "qual ", "quais ", "quando ", "onde ", "como ", "por que ",
+            "o que ", "que horas ", "será que ", "você acha que ",
+        ]
+        .iter()
+        .any(|p| lower.starts_with(p));
+        let is_exclamation = [
+            "que legal", "que bom", "uau", "nossa", "incrível", "que medo", "ai meu deus",
+        ]
+        .iter()
+        .any(|p| lower.contains(p));
+
+        if is_question {
+            out.push('?');
+        } else if is_exclamation {
+            out.push('!');
+        } else if add_final_period && out.split_whitespace().count() >= 4 {
+            out.push('.');
+        }
     }
     out
 }
@@ -541,6 +559,26 @@ mod tests {
             "Acesse o site.com.br agora."
         );
         assert_eq!(normalize_ptbr_punctuation("ok", true), "Ok");
+    }
+
+    #[test]
+    fn ptbr_final_punctuation_by_intent() {
+        assert_eq!(
+            normalize_ptbr_punctuation("que horas são", true),
+            "Que horas são?"
+        );
+        assert_eq!(
+            normalize_ptbr_punctuation("onde você foi ontem", true),
+            "Onde você foi ontem?"
+        );
+        assert_eq!(
+            normalize_ptbr_punctuation("que legal ganhamos o jogo", true),
+            "Que legal ganhamos o jogo!"
+        );
+        assert_eq!(
+            normalize_ptbr_punctuation("eu fui na praça ontem", true),
+            "Eu fui na praça ontem."
+        );
     }
 
     /// Exercise the complete cleanup sequence with an explicitly selected
