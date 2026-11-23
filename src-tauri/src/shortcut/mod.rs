@@ -1644,6 +1644,7 @@ pub async fn test_nvidia_transcription(
         wav,
         if api_key.trim().is_empty() { settings.nvidia_transcription_api_key() } else { &api_key },
         settings.nvidia_asr_function_id(),
+        &[],
     ) {
         Ok(_) => Ok(format!(
             "Conexão verificada com sucesso (Parakeet PT-BR, modelo: {}).",

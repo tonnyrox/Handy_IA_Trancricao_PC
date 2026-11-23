@@ -52,3 +52,10 @@ __pycache__/
 
 # Local build tools
 .tools/
+
+# Python virtual environment (local, never commit)
+.venv/
+
+# OpenCode local state (memory and build logs)
+.opencode/memory/
+.opencode/logs/

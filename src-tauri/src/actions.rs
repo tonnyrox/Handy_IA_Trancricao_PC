@@ -447,10 +447,30 @@ async fn post_process_transcription(
     }
 }
 
+/// Decide se vale a pena invocar o LLM no atalho principal: textos longos
+/// sem nenhuma pontuação interna são os que mais ganham com o polimento.
+fn needs_llm_polish(text: &str) -> bool {
+    let words = text.split_whitespace().count();
+    if words < 4 {
+        return false;
+    }
+    let has_inner_punct = text
+        .trim_end_matches(['.', '!', '?'])
+        .chars()
+        .any(|c| matches!(c, ',' | ';' | ':' | '.' | '?' | '!'));
+    words > 12 && !has_inner_punct
+}
+
 /// Guarda de fidelidade (item 2.5): se a "revisão" do LLM perdeu ou inventou
 /// muitas palavras (ex.: obedeceu a um comando dentro da fala), preserva o
 /// texto original em vez de aceitar uma alucinação silenciosa.
 fn fidelity_guard(original: &str, revised: String) -> String {
+    // Frases curtas com números por extenso ("dez por cento" -> "10%")
+    // derrubavam a taxa e eram descartadas em silêncio. O guard só vale
+    // quando há material suficiente para comparar.
+    if original.split_whitespace().count() < 8 {
+        return revised;
+    }
     let words = |s: &str| -> std::collections::HashSet<String> {
         s.to_lowercase()
             .split_whitespace()
@@ -795,7 +815,7 @@ impl ShortcutAction for TranscribeAction {
         play_feedback_sound(app, SoundType::Stop);
 
         let binding_id = binding_id.to_string(); // Clone binding_id for the async task
-        let post_process = self.post_process;
+        let mut post_process = self.post_process;
         let cancel_generation = rm.cancel_generation();
 
         tauri::async_runtime::spawn(async move {
@@ -889,6 +909,18 @@ impl ShortcutAction for TranscribeAction {
                                 transcription_time.elapsed(),
                                 utils::redact_text(&transcription)
                             );
+
+                            // Polimento PT-BR no atalho principal, apenas quando
+                            // compensa e o usuário habilitou (item 3.1 do plano).
+                            if !post_process {
+                                let settings = get_settings(&ah);
+                                if settings.post_process_enabled
+                                    && settings.post_process_on_main_shortcut
+                                    && needs_llm_polish(&transcription)
+                                {
+                                    post_process = true;
+                                }
+                            }
 
                             if post_process {
                                 if use_streaming_overlay {
@@ -1255,10 +1287,14 @@ mod tests {
     #[test]
     fn hallucinated_revision_is_rejected_by_fidelity_guard() {
         // O LLM "inventou" um texto sem relação → a original é preservada (2.5).
-        let url = serve_once(r#"{"choices":[{"message":{"content":"a completely invented poem"}}]}"#);
+        // Frase com 8+ palavras: o guard só atua quando há material para comparar.
+        let url = serve_once(r#"{"choices":[{"message":{"content":"a completely invented poem about something else entirely"}}]}"#);
         assert_eq!(
-            run_post_process(&post_process_settings(&url), "hello there"),
-            PostProcessOutcome::Done("hello there".to_string())
+            run_post_process(
+                &post_process_settings(&url),
+                "hello there my friend how are you doing today"
+            ),
+            PostProcessOutcome::Done("hello there my friend how are you doing today".to_string())
         );
     }
 

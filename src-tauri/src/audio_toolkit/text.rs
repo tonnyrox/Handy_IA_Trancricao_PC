@@ -3,6 +3,42 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use strsim::levenshtein;
 
+// Correções determinísticas de pontuação PT-BR. Roda sempre, sem rede.
+// Não mexe em `.` entre letras/números para preservar `3.5`, `site.com.br`, `R$ 1.500`.
+static SPACE_BEFORE_PUNCT: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s+([,;:!?])").unwrap());
+static MISSING_SPACE_AFTER: Lazy<Regex> = Lazy::new(|| Regex::new(r"([,;:!?])(\p{L})").unwrap());
+static SENTENCE_START: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"([.!?…]\s+)(\p{Ll})").unwrap());
+
+/// Aplica pontuação/maiúsculas PT-BR básicas ao texto transcrito.
+/// `add_final_period` controla o ponto final automático (útil desligar em chat).
+pub fn normalize_ptbr_punctuation(text: &str, add_final_period: bool) -> String {
+    let t = SPACE_BEFORE_PUNCT.replace_all(text, "$1");
+    let t = MISSING_SPACE_AFTER.replace_all(&t, "$1 $2");
+    let t = SENTENCE_START.replace_all(&t, |c: &regex::Captures| {
+        format!("{}{}", &c[1], c[2].to_uppercase())
+    });
+    let mut out = t.trim().to_string();
+
+    // Primeira letra maiúscula.
+    if let Some(first) = out.chars().next() {
+        if first.is_lowercase() {
+            let upper: String = first.to_uppercase().collect();
+            let rest: String = out.chars().skip(1).collect();
+            out = format!("{}{}", upper, rest);
+        }
+    }
+
+    // Ponto final só em frase com 4+ palavras terminando em letra/número.
+    if add_final_period
+        && out.chars().last().is_some_and(|c| c.is_alphanumeric())
+        && out.split_whitespace().count() >= 4
+    {
+        out.push('.');
+    }
+    out
+}
+
 /// Builds an n-gram string by cleaning and concatenating words
 ///
 /// Strips punctuation from each word, lowercases, and joins without spaces.
@@ -485,6 +521,27 @@ pub fn normalize_transcription_output(text: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn ptbr_punctuation_examples() {
+        assert_eq!(
+            normalize_ptbr_punctuation("oi , tudo bem ?", true),
+            "Oi, tudo bem?"
+        );
+        assert_eq!(
+            normalize_ptbr_punctuation("eu fui lá. depois voltei", true),
+            "Eu fui lá. Depois voltei."
+        );
+        assert_eq!(
+            normalize_ptbr_punctuation("o valor é 3.5 reais", true),
+            "O valor é 3.5 reais."
+        );
+        assert_eq!(
+            normalize_ptbr_punctuation("acesse o site.com.br agora", true),
+            "Acesse o site.com.br agora."
+        );
+        assert_eq!(normalize_ptbr_punctuation("ok", true), "Ok");
+    }
 
     /// Exercise the complete cleanup sequence with an explicitly selected
     /// language. Individual tests below predate the split between filler

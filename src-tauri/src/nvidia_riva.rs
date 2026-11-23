@@ -9,7 +9,7 @@ use std::time::Duration;
 use tonic::transport::{Channel, ClientTlsConfig, Endpoint};
 
 use crate::nvidia_riva_proto::riva::asr::riva_speech_recognition_client::RivaSpeechRecognitionClient;
-use crate::nvidia_riva_proto::riva::asr::{RecognizeRequest, RecognitionConfig};
+use crate::nvidia_riva_proto::riva::asr::{RecognizeRequest, RecognitionConfig, SpeechContext};
 use crate::nvidia_riva_proto::riva::AudioEncoding;
 
 const RIVA_URI: &str = "https://grpc.nvcf.nvidia.com:443";
@@ -59,15 +59,22 @@ pub fn transcribe_audio_blocking(
     wav_bytes: Vec<u8>,
     api_key: &str,
     function_id: &str,
+    custom_words: &[String],
 ) -> Result<String, String> {
     let api_key = api_key.to_string();
     let function_id = function_id.to_string();
+    let custom_words = custom_words.to_vec();
     std::thread::spawn(move || {
         let rt = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
             .map_err(|e| format!("Failed to create async runtime: {e}"))?;
-        rt.block_on(transcribe_audio_with_retry(wav_bytes, &api_key, &function_id))
+        rt.block_on(transcribe_audio_with_retry(
+            wav_bytes,
+            &api_key,
+            &function_id,
+            &custom_words,
+        ))
     })
     .join()
     .map_err(|_| "Riva transcription thread panicked".to_string())?
@@ -77,10 +84,11 @@ async fn transcribe_audio_with_retry(
     wav_bytes: Vec<u8>,
     api_key: &str,
     function_id: &str,
+    custom_words: &[String],
 ) -> Result<String, String> {
     let mut attempt = 0;
     loop {
-        match transcribe_audio(wav_bytes.clone(), api_key, function_id).await {
+        match transcribe_audio(wav_bytes.clone(), api_key, function_id, custom_words).await {
             Ok(text) => return Ok(text),
             Err(e) => {
                 attempt += 1;
@@ -102,6 +110,7 @@ pub async fn transcribe_audio(
     wav_bytes: Vec<u8>,
     api_key: &str,
     function_id: &str,
+    custom_words: &[String],
 ) -> Result<String, String> {
     if api_key.trim().is_empty() {
         return Err("NVIDIA API key is not configured".to_string());
@@ -144,7 +153,7 @@ pub async fn transcribe_audio(
         Ok(req)
     });
 
-    let config = RecognitionConfig {
+    let mut config = RecognitionConfig {
         encoding: AudioEncoding::LinearPcm as i32,
         sample_rate_hertz: SAMPLE_RATE,
         language_code: LANGUAGE.to_string(),
@@ -154,6 +163,13 @@ pub async fn transcribe_audio(
         // All other fields default to 0/false via prost.
         ..Default::default()
     };
+    // Reforço de vocabulário: nomes próprios/termos técnicos do usuário.
+    if !custom_words.is_empty() {
+        config.speech_contexts = vec![SpeechContext {
+            phrases: custom_words.to_vec(),
+            boost: 10.0,
+        }];
+    }
 
     // B6: dividir áudio longo em trechos de ~30 s (960.000 samples a 16 kHz).
     // O WAV gerado por samples_to_wav_bytes tem header de 44 bytes; os samples
@@ -198,8 +214,9 @@ pub async fn transcribe_audio(
         }
     }
 
+    // Silêncio não é erro: deixa o chamador tratar como "sem texto" sem toast.
     if all_text.is_empty() {
-        return Err("Riva returned an empty transcription".to_string());
+        return Ok(String::new());
     }
     Ok(all_text.join(" ").trim().to_string())
 }

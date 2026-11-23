@@ -1,7 +1,7 @@
 use crate::audio_toolkit::chunking;
 use crate::audio_toolkit::{
-    apply_custom_words, detect_output_language, normalize_transcription_output,
-    remove_filler_words, OutputLanguageEvidence,
+    apply_custom_words, detect_output_language, normalize_ptbr_punctuation,
+    normalize_transcription_output, remove_filler_words, OutputLanguageEvidence,
 };
 use crate::chinese_script::{chinese_variety_for_text, convert_chinese_script};
 use crate::engine_supervisor::{
@@ -1025,12 +1025,15 @@ impl TranscriptionManager {
                 wav_bytes,
                 settings.nvidia_transcription_api_key(),
                 settings.nvidia_asr_function_id(),
+                &settings.custom_words,
             )
             .map_err(|e| anyhow::anyhow!(e))?;
             let final_result = post_process_transcription_text(
                 raw_text,
                 &settings,
-                false,
+                // As palavras já foram enviadas ao Riva via speech_contexts;
+                // não aplicar o fuzzy local uma segunda vez.
+                !settings.custom_words.is_empty(),
                 // B4: idioma fixo em pt-BR no caminho NVIDIA, para que as regras
                 // de remoção de muletas e pontuação do PT sejam aplicadas.
                 &OutputLanguageEvidence::UserSelected("pt".to_string()),
@@ -1781,6 +1784,8 @@ fn post_process_transcription_text(
         );
 
         let text = normalize_transcription_output(&without_fillers);
+        // Corretor PT-BR determinístico: vírgulas, maiúsculas e ponto final.
+        let text = normalize_ptbr_punctuation(&text, settings.ptbr_final_period);
         // Short, wordless clips often come back as just "." or "?".
         if text.chars().any(char::is_alphanumeric) {
             text
@@ -2207,7 +2212,7 @@ mod tests {
             evidence,
             OutputLanguageEvidence::UserSelected("pt".to_string())
         );
-        assert_eq!(result, "eu vi um carro");
+        assert_eq!(result, "Eu vi um carro.");
     }
 
     #[test]
@@ -2256,7 +2261,7 @@ mod tests {
         );
 
         assert_eq!(evidence, OutputLanguageEvidence::Unknown);
-        assert_eq!(result, "um ok");
+        assert_eq!(result, "Um ok");
     }
 
     #[test]
@@ -2277,7 +2282,7 @@ mod tests {
 
         assert_eq!(
             result,
-            "so the weather forecast said it would probably rain throughout the whole weekend"
+            "So the weather forecast said it would probably rain throughout the whole weekend."
         );
     }
 
@@ -2298,7 +2303,7 @@ mod tests {
 
         assert_eq!(
             result,
-            "eu vi um carro na rua ontem de manhã quando fui ao mercado"
+            "Eu vi um carro na rua ontem de manhã quando fui ao mercado."
         );
     }
 
@@ -2382,7 +2387,7 @@ mod tests {
             &evidence,
             &supported,
         );
-        assert_eq!(result, "eu vi um carro");
+        assert_eq!(result, "Eu vi um carro.");
     }
 
     #[test]
@@ -2470,7 +2475,7 @@ mod tests {
             &evidence,
             &supported,
         );
-        assert_eq!(prompted, "i use handy every day");
+        assert_eq!(prompted, "I use handy every day.");
 
         // No vocabulary sent: the fuzzy post-correction fixes the casing.
         let corrected = post_process_transcription_text(
@@ -2480,7 +2485,7 @@ mod tests {
             &evidence,
             &supported,
         );
-        assert_eq!(corrected, "i use Handy every day");
+        assert_eq!(corrected, "I use Handy every day.");
     }
 
     #[test]

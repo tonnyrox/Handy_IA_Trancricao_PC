@@ -186,6 +186,8 @@ mod tests {
             "ctrl+alt+space",
             "ctrl+alt+shift+space",
             "alt+space",
+            "capslock",
+            "shift+capslock",
             "escape",
         ] {
             assert_eq!(validate_shortcut(raw), Ok(()), "{raw} should be accepted");
