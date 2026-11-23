@@ -70,18 +70,11 @@ export const ModelsSettings: React.FC = () => {
     updatePostProcessModel,
   } = useSettings();
 
-  // Provedores de IA disponíveis na nuvem para a revisão gramatical.
-  // Cada provedor mostra seus próprios modelos (mesmo padrão da aba Local).
+  // Provedor de IA disponível na nuvem para a revisão gramatical.
+  // NVIDIA/Nemotron foi REMOVIDO: no formato real do app (system prompt +
+  // response_format + thinking:false) ele devolve o texto cru (0/10 no golden
+  // test). Groq gpt-oss-120b passa 10/10 — é o único provedor de revisão ativo.
   const cloudAiProviders = [
-    {
-      id: "nvidia",
-      label: "Nuvem gratuita",
-      hint: "Transcrição rápida PT-BR gratuita",
-      models: [
-        { id: "nvidia/nemotron-3.5-lightning-30b-a3b", label: "Nemotron 3.5 Lightning 30B" },
-        { id: "nvidia/nemotron-3.5-bolt-e4b", label: "Nemotron 3.5 Bolt E4B" },
-      ],
-    },
     {
       id: "groq",
       label: "Groq",

@@ -321,7 +321,8 @@
     "modelUnloaded": "Modello Disattivato",
     "noModelDownloadRequired": "Nessun Modello - Download Richiesto",
     "downloadSpeed": "{{speed}} MB/s",
-    "lockedWhileTranscribing": "Potrai cambiare modello al termine della trascrizione nella Cronologia."
+    "lockedWhileTranscribing": "Potrai cambiare modello al termine della trascrizione nella Cronologia.",
+    "cloudActive": "NVIDIA (cloud)"
   },
   "settings": {
     "modelSettings": {
@@ -441,7 +442,9 @@
           "options": {
             "local": "Local (on-device)",
             "nvidia": "NVIDIA (cloud, API key)"
-          }
+          },
+          "cloudHint": "NVIDIA Cloud — fast PT-BR transcription, free",
+          "localHint": "On-device transcription, no internet"
         },
         "nvidia": {
           "title": "NVIDIA transcription",
@@ -449,7 +452,11 @@
           "apiKey": {
             "label": "NVIDIA API key",
             "placeholder": "Enter your NVIDIA API key",
-            "description": "Your NVIDIA API key. It is stored locally in app settings."
+            "description": "Your NVIDIA API key. It is stored locally in app settings.",
+            "remove": "Remove key",
+            "removeConfirm": "Remove the saved key? Cloud transcription stops until you paste another one.",
+            "removed": "Key removed.",
+            "showHide": "Show/Hide key"
           },
           "model": {
             "label": "Model",
@@ -463,7 +470,31 @@
             "unknownError": "Failed to verify NVIDIA configuration.",
             "needsKey": "Enter your NVIDIA API key to load models and verify the configuration."
           },
-          "cloudNote": "Cloud transcription requires internet access and usa apenas modelos gratuitos depending on the selected model. Handy sends recorded audio to NVIDIA only when NVIDIA is selected."
+          "cloudNote": "Cloud transcription requires internet access and usa apenas modelos gratuitos depending on the selected model. Handy sends recorded audio to NVIDIA only when NVIDIA is selected.",
+          "activeModelDescription": "NVIDIA cloud transcription model applied, free and tested",
+          "advanced": "Advanced (optional) — model Function-ID",
+          "apply": {
+            "applying": "Applying...",
+            "button": "Apply",
+            "success": "NVIDIA model applied. The local model was deselected.",
+            "unknownError": "Failed to apply the NVIDIA configuration."
+          },
+          "check": {
+            "button": "Verify models",
+            "checking": "Verifying models...",
+            "done": "Verification complete: {{ok}} model(s) approved, {{bad}} hidden for not transcribing audio.",
+            "error": "Failed to verify models.",
+            "noRecording": "Make a recording before verifying models."
+          },
+          "cloudSection": "Model in use (NVIDIA Cloud)",
+          "currentModelOption": "selected model",
+          "functionId": {
+            "description": "ID of the voice model enabled on your NVIDIA account (build.nvidia.com). Update it if you change the key or model.",
+            "label": "Model Function-ID (Riva)",
+            "placeholder": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+          },
+          "localTestButton": "Choose model for local test",
+          "localTestHint": "Want to compare with a local model? Download one, test offline, and come back to the cloud anytime."
         }
       }
     },
@@ -669,7 +700,9 @@
         "title": "API",
         "provider": {
           "title": "Provider",
-          "description": "Seleziona un provider compatibile con OpenAI o Anthropic."
+          "description": "Seleziona un provider compatibile con OpenAI o Anthropic.",
+          "freeTier": "Free tier available",
+          "paid": "Paid — may require credits"
         },
         "apiFormat": {
           "title": "Formato API",

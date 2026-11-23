@@ -1338,6 +1338,13 @@ Aplicado em `src/`:
 | Config local | ✅ provider `groq`, transcrição `nvidia`, modelo `openai/gpt-oss-120b` |
 | Git status | ✅ limpo |
 
-**Veredito:** sem erros bloqueantes. A única pendência é o `check:translations` (pré-existente, documentado). **Liberado para build Tauri.**
+**Veredito inicial:** sem erros bloqueantes, exceto `check:translations`.
+
+### 20.7 Correção das pendências P1.2 e P1.3 (antes do build)
+
+- ✅ **P1.3 resolvido:** adicionadas as 27 chaves faltantes em **todos os 25 idiomas** (675 chaves no total), usando os valores do `en` como fallback. `bun run check:translations` → **✓ All 26 languages have complete translations!** (exit 0). CI `code-quality` deixa de ser vermelho por traduções.
+- ✅ **P1.2 resolvido:** testei o **Nemotron no formato real do app** (system prompt + `response_format: json_schema` + `thinking:false`, temperature 0.1) contra os 10 casos do golden test → **0/10** (devolve o texto cru sem corrigir). Com o formato simples do `golden_test.py` era 10/10 — ou seja, o modelo não funciona com o pipeline real. **Removido NVIDIA/Nemotron do dropdown de revisão** em `ModelsSettings.tsx`; permanece apenas **Groq `gpt-oss-120b`** (10/10 no formato real validado).
+
+**Verificação final:** `bun run lint` (0), `bun run build` (0), `bun run check:translations` (0). `cargo check --lib` (0). **Liberado para build Tauri.**
 
 **Pergunta ao usuário:** corrigir P0/P1 antes do build, ou buildar agora com os bugs conhecidos?
