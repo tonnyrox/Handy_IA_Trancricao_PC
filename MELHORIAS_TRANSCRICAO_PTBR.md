@@ -1039,3 +1039,67 @@ Aplicado em `src/components/settings/models/ModelsSettings.tsx`:
 - [x] Publicar sem chaves
 
 **Nota:** build Tauri/reinstalação **não** foram feitos nesta etapa (somente interface). `check:translations` segue com as 27 chaves pré-existentes faltantes — não bloqueante para este fork.
+
+---
+
+# 17. AUDITORIA COMPLETA ANTES DO BUILD (24/11/2026)
+
+> Usuário pediu análise total antes de buildar. **Nenhum build foi feito nesta etapa.**
+> Veredito: núcleo da revisão PT-BR está correto; os bloqueadores são default sem chave, User-Agent ineficaz, binário desatualizado e documentação divergente. **Segurança de chaves: OK.**
+
+## 17.1 ✅ Confirmado OK
+
+- `needs_llm_polish` removido (0 ocorrências); gate único em `actions.rs:208-210`.
+- `fidelity_guard` conforme o plano (`actions.rs:474-519`), aplicado nos 3 fallbacks de JSON e no modo legacy.
+- `"groq"` em `disable_reasoning` (`actions.rs:305-308`).
+- `speech_contexts` no Riva (`nvidia_riva.rs:166-172`); silêncio retorna `Ok("")` (`:217-220`).
+- Defaults PT-BR conferidos em `settings.rs:777` (`true`), `:796` (`groq`), `:923` (`gpt-oss-120b`), `:1145` (prompt), `:1049-1055` (preenche quando `None`).
+- `updatePostProcessModel` existe e funciona (`settingsStore.ts:636` → `bindings.ts:532` → `shortcut/mod.rs:1225-1235`).
+- `bun run lint` (exit 0), `bun run test:keyboard` (exit 0).
+- **Zero chaves** em arquivos versionados e em todo o histórico do git; `.env` e `settings_store.json` fora do repo.
+
+## 17.2 🔴 P0 — corrigir antes de buildar
+
+| ID | Problema | Evidência | Correção |
+|---|---|---|---|
+| P0.1 | Revisão ligada por default **sem chave** ⇒ em instalação nova, toda ditção cola texto cru **e** mostra aviso de falha | `settings.rs:777` (true) + `:911` (chave vazia) + `actions.rs:208-210` (gate não checa chave) + `:1046-1051` (notice) | Skip silencioso do LLM quando `api_key` do provider ativo estiver vazia (sem aviso) |
+| P0.2 | User-Agent de navegador **não ativa**: `build_headers` (`llm_client.rs:203-206`) sempre envia `Handy/1.0`, que sobrescreve o UA do `shared_client` (`:255-258`) | reqwest insere headers default só se a chave estiver vaga | Alinhar o UA em `build_headers` ao UA de navegador, ou removê-lo |
+
+## 17.3 🟠 P1 — bloqueadores para build seguro
+
+| ID | Problema | Correção |
+|---|---|---|
+| P1.1 | Binário instalado é de **13:13**, anterior a `01365e5` (UI) e `1f470b5` (IAs) — a nova tela ainda não aparece | Build Tauri + reinstalação |
+| P1.2 | Dropdown oferece Nemotron, mas o app envia **system prompt + `response_format` + `thinking:false`**, diferente do golden test (10/10 com user message simples); além disso `post_process_models["nvidia"]` fica vazio | Validar Nemotron no formato real do app **ou** desabilitar NVIDIA no dropdown até validar |
+| P1.3 | CI `code-quality` vermelho: `check:translations` — 25 idiomas × 27 chaves faltantes (25 do fork + 2 do upstream) | Completar as chaves nos 25 idiomas ou aceitar CI vermelho explicitamente |
+| P1.4 | Loading do chip nunca ativa: `isUpdating("post_process_model")` sem o sufixo do provider (o store usa `post_process_model:<id>`) | Usar a chave com sufixo |
+
+## 17.4 🟡 P2 — inconsistências / dívida
+
+- **Campos mortos:** `post_process_on_main_shortcut` (zero usos), `nvidia_transcription_model` (UI deixa trocar, ASR ignora — `shortcut/mod.rs:1638`), `is_auth_error` (`nvidia_riva.rs:44-53`, sem chamador e com `401/403` no texto).
+- **Documentação divergente:** `INDICE.md` diz 15 seções (são 16); 12.1/12.4/13.2/14.3 descrevem estado antigo; 15 começa com "NÃO EXECUTAR" mas tem checklist marcado; "Modelos" ainda em `README.md` e `nvidia_riva.rs:34`; `README.md:388` cita `Planos/01-04…` que não existe; descrição de `teste_rapido.py` está errada.
+- **i18n da UI nova:** `settings.models.tabs.cloud/local` não existem nos JSON (só `defaultValue`); labels/hints de `cloudAiProviders` são literais PT-BR; 25 idiomas seguem com "Models".
+- **Critério contradiz código:** 16.5.2 exige guia Nuvem primeiro, mas `ModelsSettings.tsx:107-111` só abre Nuvem se `transcription_provider === "nvidia"` (default é `local`).
+- **golden_test.py:** correto e 10/10, mas **não representa o pipeline real** (temperature 0.2 vs 0.1, sem system prompt, sem `response_format`).
+- **Corte de áudio:** `nvidia_riva.rs:174-215` ainda corta a cada 30 s (item 3.3 pendente).
+- **Testes:** ~391 atributos `#[test]` no Rust; nenhum teste para a UI/guias; nenhum para `nvidia_riva.rs`.
+
+## 17.5 🟢 P3 — menores
+
+- A11y: `role="tablist"`/`role="tab"` sem `id`, `aria-controls` e `role="tabpanel"`.
+- `format:check` falha localmente por `core.autocrlf=true` + prettier `lf` — artefato de ambiente, não do repo.
+- `target/` ~9 GB e `.tools/` ~143 MB são regeneráveis — não apagar antes do build.
+
+## 17.6 Checklist para buildar com segurança
+
+1. [ ] P0.1 — skip silencioso quando chave vazia
+2. [ ] P0.2 — corrigir UA em `build_headers`
+3. [ ] P1.4 — chave `isUpdating` com sufixo
+4. [ ] P1.2 — validar ou desabilitar Nemotron no dropdown
+5. [ ] P2 — sincronizar documentação (seções, commits, nomes de aba)
+6. [ ] P2 — alinhar default da guia ao critério 16.5.2
+7. [ ] P0.3/P1.1 — `cargo test --lib` → `bun run build` → `bun run tauri build --no-bundle` → reinstalar preservando `settings_store.json`
+8. [ ] Validar 5 falas do 13.6 + log `Starting LLM post-processing with provider 'groq'`
+9. [ ] Varredura de chaves no staged + publicar
+
+**Pergunta ao usuário:** corrigir P0/P1 antes do build, ou buildar agora com os bugs conhecidos?
