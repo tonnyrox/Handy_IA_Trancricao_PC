@@ -1193,4 +1193,21 @@ A tela troca **todos os textos, placeholder, hint, modelos, avançado e status**
 - [ ] Validação (golden test + 5 falas) antes de trocar o default
 - [ ] Build + reinstalação + publicação sem chaves
 
+### 19.7 Referência canônica do layout (decisão do usuário)
+
+> **`preview-ias.html` é a base para tudo.** Todo o layout do sistema será conferido contra esse arquivo.
+
+- O arquivo enviado pelo usuário foi salvo **integralmente**, sem alterações, em `preview-ias.html`.
+- Ele define a estrutura visual: **IAs → guias Nuvem/Local → Nuvem com 3 passos** (Provedor → Chave API Key → Modelo), badges de "API Única", painel de status consolidado, avançado por provedor e guia Local com modelos clicáveis.
+- Regra de trabalho: **antes de mexer em qualquer tela React/Rust, conferir se corresponde ao HTML de referência**. Se divergir, o HTML manda.
+- As chaves presentes no HTML são **fictícias de demonstração** (`gsk_demo…`, `nvapi-demo…`) — nunca substituir por chaves reais.
+-Este é o único arquivo de prévia: não criar outros HTMLs de layout.
+
+**Próximos passos com o HTML como base:**
+1. [x] Salvar o HTML enviado como referência
+2. [x] Registrar como fonte de verdade (esta seção)
+3. [ ] Ajustar `ModelsSettings.tsx` para reproduzir exatamente os 3 passos do HTML
+4. [ ] Implementar o backend de escopo único (19.3)
+5. [ ] Validar com build + reinstalação e comparar com o HTML lado a lado
+
 **Pergunta ao usuário:** corrigir P0/P1 antes do build, ou buildar agora com os bugs conhecidos?

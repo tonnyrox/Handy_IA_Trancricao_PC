@@ -7,7 +7,8 @@ Atualizado em 23/11/2026 (data dos commits). Revisado em 24/11/2026.
 
 | Arquivo | O que contém |
 |---|---|
-| **`MELHORIAS_TRANSCRICAO_PTBR.md`** | Diagnóstico, decisões, plano de melhorias e estado atual da transcrição PT-BR. É o documento vivo do projeto — **toda melhoria vai para cá**. Tem 17 seções + apêndice consolidado. **A seção 17 (auditoria) é o estado mais recente; a 16 registra o layout da aba IAs; a 13 é o plano operacional; as anteriores são histórico.** |
+| **`MELHORIAS_TRANSCRICAO_PTBR.md`** | Diagnóstico, decisões, plano de melhorias e estado atual da transcrição PT-BR. É o documento vivo do projeto — **toda melhoria vai para cá**. Tem 19 seções + apêndice consolidado. **A seção 19 é a mais recente: define `preview-ias.html` como referência canônica do layout; a 17 é a auditoria; a 13 é o plano operacional; as anteriores são histórico.** |
+| **`preview-ias.html`** | **Referência visual canônica do layout da aba IAs** (enviada pelo usuário). Cópia exata, autocontida, tema escuro. Toda tela do sistema deve ser conferida contra ela antes de ser alterada. |
 
 ## 2. Documentação do fork (aplicável ao nosso sistema)
 
