@@ -486,3 +486,136 @@ Ou seja: **quando o LLM roda, ele corrige bem vírgulas, concordância verbal, c
 - Nenhum código ou configuração foi modificado nesta rodada.
 - App segue com Groq `gpt-oss-120b` configurado, porém com o filtro bloqueando o LLM no atalho principal.
 - GitHub segue em `c249e45`.
+
+---
+
+## 12. ANÁLISE PROFUNDA DO SISTEMA (24/11) — portrait completo
+
+> **NÃO APLICAR CORREÇÕES DE CÓDIGO AINDA.** Registrar, organizar e aguardar verificação. A limpeza de arquivos obsoletos foi autorizada pelo usuário e está tratada em 12.6.
+
+### 12.1 As QUATRO barreiras em sequência (atalho principal / Caps Lock)
+
+| # | Barreira | Local | Efeito |
+|---|---|---|---|
+| 1 | `post_process_enabled` default `false` | `settings.rs:777-779` | Desliga tudo, inclusive o atalho secundário |
+| 2 | `post_process_on_main_shortcut` default `false` **e sem UI/comando** | `settings.rs:510`, `:1124`, `actions.rs:921` | **Campo órfão**: existe só em Rust + tipo TS; nenhum `#[tauri::command]`, nenhum setter no store, nenhum componente. Só se altera editando o JSON na mão |
+| 3 | `needs_llm_polish` exige **>12 palavras E zero pontuação interna** | `actions.rs:455-465`, chamado em `:922` | Bloqueia quase toda fala real (Riva pontua + corretor local pontua) |
+| 4 | `fidelity_guard` descarta a revisão se <60% das palavras sobrevivem | `actions.rs:470-501`, aplicado em `:390` e `:436` | Silencioso (só `warn!` no log); cola o texto original e **nem avisa** (`post_process_failed` fica `false`) |
+
+**Consequência:** o Groq está configurado e funcional, mas no dia a dia **quase nunca é invocado**; quando é, ainda pode ser descartado em silêncio.
+
+### 12.2 Atenção: duas funções com nomes quase idênticos
+
+| Função | Arquivo | Natureza |
+|---|---|---|
+| `post_process_transcription_text` (5 args) | `managers/transcription.rs:1734-1796` | Corretor **determinístico local** (sem LLM) |
+| `post_process_transcription` (2 args) | `actions.rs:221-451` | Revisão **LLM** (Groq/NVIDIA/etc.) — é a que importa |
+
+O wrapper `process_transcription_output` (`actions.rs:511`) chama a do `actions.rs`. Confusão entre essas duas é a principal fonte de erro de diagnóstico.
+
+### 12.3 Mapa de TODOS os 11 caminhos que entregam texto
+
+| Caminho | Onde | Passa pelo LLM? | Por que falha |
+|---|---|---|---|
+| A — Caps Lock (`transcribe`) | `actions.rs:821`, gate `:916-926`, colagem `:1011` | **Condicional** | 4 barreiras acima; falha **totalmente silenciosa** |
+| B — Shift+Caps Lock (`transcribe_with_post_process`) | `actions.rs:1192-1195` | **Sim** | Registro depende de `post_process_enabled`; modelo/prompt vazios por default |
+| C — CLI `--toggle-transcription` | `cli.rs:15`, `lib.rs:936` → binding `transcribe` | igual a A | mesmas barreiras |
+| D — CLI `--toggle-post-process` | `cli.rs:19`, `lib.rs:938` | **Sim** | única forma confiável de forçar sem editar JSON |
+| E — Sinais SIGUSR1/SIGUSR2 | `signal_handle.rs:26-57` | SIGUSR1 sim, SIGUSR2 não | mesmo gate de A |
+| F — Live preview / streaming | `actions.rs:686`, `transcription.rs:1478` | **Não** | overlay mostra texto cru; LLM só no `stop()` → usuário vê texto diferente do colado |
+| G — Histórico (retry/importar arquivo) | `transcription_jobs.rs:301-349`, `history.rs:64-94` | só se `post_process_requested=true` | campo congelado no momento da gravação; se gate barrou, grava `false` |
+| H — Hook do usuário | `transcription_hook.rs`, `actions.rs:968-980` | LLM roda antes | stdout do hook **substitui** a revisão na colagem (histórico guarda a revisada) |
+| I — `--transcribe-file` headless | `cli.rs:31`, `lib.rs:480-605` | **Não** | termina no determinístico, imprime no stdout |
+| J — Cancelamento durante revisão | `actions.rs:186-204`, `:935-945` | future dropado | nada é colado, sem fallback |
+| K — `PasteMethod::None` | `clipboard.rs:944-946` | processa mas não entrega | `append_trailing_space` é única transformação pós-LLM |
+
+### 12.3.1 Descobertas adicionais no `fidelity_guard`
+
+- Texto com **< 8 palavras → guard NÃO atua** (já corrigido; o MD antigo dizia o contrário).
+- Com ≥ 8: compara conjuntos de tokens alfanuméricos minúsculos; **descarta se interseção/original < 0.6**.
+- **Não detecta adição** de palavras inventadas (só perda).
+- Trocas legítimas derrubam a taxa: `foi→foram`, `pra→para`, `a mim→me`, `saiu→saído` — **justamente as correções que queremos**.
+- **Furo:** nos fallbacks de JSON inválido/sem campo `transcription` (`actions.rs:392-404`) retorna `Done(...)` **sem passar pelo guard** — texto bruto do LLM pode ser colado com explicações.
+
+### 12.4 Configuração: quem pode sobrescrever o quê
+
+- Backend defaults: `post_process_enabled=false`, `post_process_on_main_shortcut=false`, provider `openai`, **todos os modelos vazios**, `post_process_selected_prompt_id=None`.
+- `ensure_post_process_defaults` (`settings.rs:979-1044`) **não** seta `post_process_selected_prompt_id`.
+- Migrações vão até v4 e não tocam post-processing.
+- Frontend: só existe toggle para `post_process_enabled` (escondido em **Debug**, `PostProcessingToggle.tsx`); a aba "Post Process" só aparece se ele já estiver `true` (`Sidebar.tsx:59-64`) — **o usuário precisa achar o toggle em Debug antes de poder configurar provider/modelo/prompt**.
+- Nenhum setter para `post_process_on_main_shortcut` em `lib.rs:734-745`, `settingsStore.ts:177-180` ou componentes.
+
+**Conclusão:** a config atual (Groq + prompt) só foi possível editando o JSON na mão. Isso é frágil e explica "toda hora volta a colocar texto bruto" — qualquer reescrita do store pelo app pode perder os campos órfãos.
+
+### 12.5 Pesquisa na internet (boas práticas de revisão PT-BR)
+
+Fontes consultadas: TechTudo (03/11/2026), Rodopio (30/01/2026), todo.is, CorretorIA (02/12/2025), guia de prompts jurídicos.
+
+Consenso encontrado:
+1. **Intervenção mínima necessária** — corrigir só o erro, não reescrever.
+2. Explicitar o que **não** mudar: sentido, estilo, voz, nomes próprios, termos técnicos, números, ordem das ideias.
+3. Pedir correção de: ortografia/AO, acentuação, **concordância verbal e nominal**, regência, crase, pontuação (vírgulas críticas), pronomes/colocação.
+4. **Dupla passada**: (A) típicos — crase, concordância, regência, pontuação básica; (B) casos-limite — `a/à/há`, `por que/porque`, `onde/aonde`, `haver/existir`, `um dos que`, `fazer/ser/estar` com tempo.
+5. **Pontuação final por intenção**: `.` afirmação, `?` pergunta, `!` exclamação — e **nunca separar sujeito e verbo com vírgula**, **vírgula após oração adverbial inicial**, **sem vírgula entre sujeito e verbo**.
+6. Pedir ao modelo para **não acrescentar informações nem opiniões** e, em dúvida, **sinalizar em vez de reescrever**.
+7. Validação humana: conferir nomes, datas, números — o modelo erra em norma divergente.
+
+Isso reforça que o prompt atual (`groq_ptbr_reviewer`) está no caminho certo, mas **precisa das regras explícitas de vírgula e de pontuação final por intenção**, e de uma **dupla passada** para casos-limite.
+
+### 12.6 Limpeza de arquivos obsoletos (autorizada — executada)
+
+Foram identificados e **removidos**:
+
+| Arquivo | Motivo |
+|---|---|
+| `.opencode/plans/003-gemini-transcricao-cloud.md` | Gemini substituído por NVIDIA/Groq |
+| `.opencode/plans/004-gemini-modelo-dropdown-e-teste.md` | idem |
+| `.opencode/plans/005-openrouter-transcricao-cloud.md` | OpenRouter substituído |
+| `.opencode/plans/006-openrouter-aplicar-e-ajustes-ui.md` | idem |
+| `.opencode/plans/007-remover-onboarding-e-corrigir-openrouter.md` | idem |
+| `.opencode/plans/008-correcao-openrouter-persistencia-e-modelo-padrao.md` | idem |
+| `.opencode/plans/009-openrouter-apenas-modelos-gratuitos.md` | idem |
+
+**Mantidos** (125 KB, histórico relevante do fork): `001-setup-dev-handy.md`, `002-trocar-rosa-por-azul-e-instalar.md`, `010-trocar-openrouter-por-nvidia.md`, `011-parakeet-grpc-ptbr.md`, `012-chave-modelos-e-qualidade.md`, `013-organizacao-visual-modelos.md`.
+
+**Código morto mapeado para remoção futura (NÃO removido agora):**
+- `nvidia_transcription_model` — field em `settings.rs:609-613`, default `:954-956`, migração `:1514-1515`; `shortcut/mod.rs:1638` faz `let _ = model;` ("Riva Parakeet is fixed"). Não influencia o ASR.
+- `is_auth_error` em `nvidia_riva.rs:45-53` ainda procura `"401"/"403"` no texto, enquanto `classify_riva_error` (`:23-42`) decidiu só pelo `tonic::Code` — inconsistência residual (marcador B7).
+- `needs_llm_polish` e `fidelity_guard` **sem testes unitários**.
+
+**Arquivos de teste úteis — MANTIDOS:** `tools/comparar_modelos.py`, `tools/golden_test.py`, `teste_rapido.py`, `teste_mic.py`, `TESTE.bat`, `TESTE_MIC.bat`, `riva_asr.py`. Servem para o banco de frases de 9.2.2.
+
+**Espaço em disco (diagnóstico):** `src-tauri\target` ~9 GB, `node_modules` ~194 MB, `.tools` ~143 MB (CMake portátil), `.venv` ~96 MB, `.git` ~5 MB. `target` e `.tools` são regeneráveis; **não apagar agora** (build incremental depende deles).
+
+### 12.7 Plano de correção atualizado (aguardando verificação — NÃO aplicar)
+
+**Prioridade P0 — fazer o LLM rodar sempre:**
+1. `actions.rs:916-926` — remover `needs_llm_polish`; chamar o LLM sempre que `post_process_enabled && post_process_on_main_shortcut`, exceto texto vazio/`< 3 palavras`. **Nunca usar presença de pontuação como critério** (é o sintoma a corrigir).
+2. Eliminar o gate duplo: fazer `post_process_enabled` bastar, **ou** expor `post_process_on_main_shortcut` com command + setter + toggle + i18n.
+3. Defaults PT-BR do fork: `post_process_enabled=true`, provider `groq`, modelo `openai/gpt-oss-120b`, `post_process_selected_prompt_id=Some("default_improve_transcriptions")`.
+
+**Prioridade P1 — não descartar a correção:**
+4. `fidelity_guard` (`actions.rs:470-501`): limiar 0.6 → ~0.4, ignorar tokens numéricos, usar similaridade fuzzy, e transformar o descarte em `PostProcessOutcome::Failed` para aparecer o aviso.
+5. Aplicar o guard também nos fallbacks de JSON (`actions.rs:392-404`).
+6. Incluir `"groq"` em `disable_reasoning` se necessário.
+
+**Prioridade P2 — robustez:**
+7. Testes unitários para `needs_llm_polish` e `fidelity_guard`.
+8. Log `info` quando o gate decidir não chamar o LLM, com o motivo.
+9. Correção final de pontuação por intenção (`?`, `!`, `.`) — reforçar prompt conforme 12.5.5 e corretor local com iniciadores de pergunta/exclamação (item 9.1).
+10. Corte no silêncio no Riva (item 3.3) para reduzir pontuação espúria de chunks de 30 s.
+
+### 12.8 Checklist de verificação antes de aplicar
+
+- [ ] Gravar 5 falas reais e comparar: (a) texto cru do Riva, (b) texto colado pelo app.
+- [ ] Confirmar no log: `Starting LLM post-processing with provider 'groq'` aparece?
+- [ ] Confirmar que `post_process_on_main_shortcut` sobrevive a reinícios do app.
+- [ ] Confirmar que o `fidelity_guard` não está jogando fora a revisão (comparar com log `diverged too much`).
+- [ ] Rodar o `tools/golden_test.py` com as frases de 9.2.2 antes e depois.
+- [ ] Só então aplicar 12.7, com `cargo test --lib` + build + reinstalação + commit sem chaves.
+
+### 12.9 Estado atual
+
+- Nenhuma correção de código aplicada nesta rodada.
+- 7 planos obsoletos removidos (12.6).
+- GitHub atualizado até `e115e1d` (mais o commit de limpeza e este documento).
