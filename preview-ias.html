@@ -959,13 +959,6 @@
          GUIA 1: NUVEM (Escopo Único por Provedor — Sem misturar APIs)
          ====================================================================== -->
     <section id="cloud">
-      <!-- Indicador de modo: verde = ativo, vermelho = desativado -->
-      <div class="mode-indicator">
-        <span class="mode-chip active" id="chipCloudMode"><span class="mode-dot"></span>Nuvem · ativa</span>
-        <span class="mode-chip inactive" id="chipLocalMode"><span class="mode-dot"></span>Local · desativado</span>
-        <span class="mode-indicator-note">Apenas um modo ativo por vez. Aplicar na nuvem desativa o modo local.</span>
-      </div>
-
       <div class="card">
         <div class="card-header">
           <div>
@@ -1082,13 +1075,6 @@
          GUIA 2: LOCAL (Modelos offline clicáveis)
          ====================================================================== -->
     <section id="local" class="hidden">
-      <!-- Indicador de modo: verde = ativo, vermelho = desativado -->
-      <div class="mode-indicator">
-        <span class="mode-chip inactive" id="chipCloudModeLocal"><span class="mode-dot"></span>Nuvem · desativada</span>
-        <span class="mode-chip active" id="chipLocalModeLocal"><span class="mode-dot"></span>Local · ativo</span>
-        <span class="mode-indicator-note">Apenas um modo ativo por vez. Selecionar um modelo local desativa a nuvem.</span>
-      </div>
-
       <div class="retired">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         <span>Aviso sobre modelos aposentados</span>
@@ -1329,28 +1315,6 @@
    */
   function updateModeIndicators() {
     const cloudAtivo = state.activeMode === 'cloud';
-
-    // Indicadores no topo da guia Nuvem e da guia Local
-    const sets = [
-      ['chipCloudMode', 'chipLocalMode', cloudAtivo],
-      ['chipCloudModeLocal', 'chipLocalModeLocal', cloudAtivo],
-    ];
-    for (const [cloudId, localId] of sets) {
-      const cloud = document.getElementById(cloudId);
-      const local = document.getElementById(localId);
-      if (!cloud || !local) continue;
-      cloud.textContent = cloudAtivo ? 'Nuvem · ativa' : 'Nuvem · desativada';
-      local.textContent = cloudAtivo ? 'Local · desativado' : 'Local · ativo';
-      cloud.className = `mode-chip ${cloudAtivo ? 'active' : 'inactive'}`;
-      local.className = `mode-chip ${cloudAtivo ? 'inactive' : 'active'}`;
-      // Restaura o ponto colorido interno (sem duplicar)
-      if (!cloud.querySelector('.mode-dot')) {
-        cloud.insertAdjacentHTML('afterbegin', '<span class="mode-dot"></span>');
-      }
-      if (!local.querySelector('.mode-dot')) {
-        local.insertAdjacentHTML('afterbegin', '<span class="mode-dot"></span>');
-      }
-    }
 
     // Badges dos títulos: Ativado (verde) / Desativado (vermelho)
     const cloudBadge = document.getElementById('cloudStateBadge');
